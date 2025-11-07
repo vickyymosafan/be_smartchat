@@ -6,6 +6,7 @@
  * Untuk Vercel deployment, gunakan api/index.ts sebagai serverless handler.
  */
 
+import 'dotenv/config';
 import { app } from './app';
 import { config } from '../config/env';
 import { logInfo, logError } from '../infra/log/logger';
