@@ -1,0 +1,14 @@
+node_modules
+.env
+.env.local
+dist
+logs
+*.log
+.vscode
+.idea
+.DS_Store
+.git
+.gitignore
+test-endpoints.ps1
+test-endpoints.sh
+IMPLEMENTATION_CHECKLIST.md

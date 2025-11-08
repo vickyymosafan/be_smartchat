@@ -128,54 +128,33 @@ npm start
 
 ## 🌐 Deployment ke Vercel
 
-### Requirements
+### Quick Deploy
 
-- Akun Vercel
-- Repository sudah di-push ke GitHub/GitLab/Bitbucket
+1. **Push ke GitHub**
+   ```bash
+   git push origin main
+   ```
 
-### Langkah-langkah
+2. **Import di Vercel**
+   - Login ke [vercel.com](https://vercel.com)
+   - Import repository
+   - Set **Root Directory** = `backend`
 
-1. **Login ke Vercel Dashboard**
+3. **Set Environment Variables**
+   ```
+   N8N_WEBHOOK_URL=https://your-n8n.app.n8n.cloud/webhook/xxx/chat
+   FRONTEND_ORIGINS=https://your-frontend.vercel.app
+   N8N_TIMEOUT_MS=15000
+   LOG_LEVEL=info
+   NODE_ENV=production
+   ```
 
-Buka [vercel.com](https://vercel.com) dan login
+4. **Deploy & Test**
+   ```bash
+   curl https://your-backend.vercel.app/health
+   ```
 
-2. **Import Project**
-
-- Klik "Add New Project"
-- Pilih repository Anda
-- Set **Root Directory** ke `backend`
-
-3. **Configure Build Settings**
-
-Vercel akan otomatis detect settings, tapi pastikan:
-
-- **Build Command**: `npm run build`
-- **Output Directory**: `dist`
-- **Install Command**: `npm install`
-
-4. **Set Environment Variables**
-
-Di Vercel Dashboard, tambahkan environment variables:
-
-```
-N8N_WEBHOOK_URL=https://your-n8n-instance.app.n8n.cloud/webhook/xxx/chat
-FRONTEND_ORIGINS=https://your-frontend.vercel.app,https://www.yourdomain.com
-N8N_TIMEOUT_MS=15000
-LOG_LEVEL=info
-NODE_ENV=production
-```
-
-5. **Deploy**
-
-Klik "Deploy" dan tunggu proses selesai
-
-6. **Test Deployment**
-
-Setelah deploy sukses, test endpoint:
-
-```bash
-curl https://your-backend.vercel.app/health
-```
+📖 **Detailed Guide**: Lihat [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md)
 
 ## 📡 API Endpoints
 
