@@ -11,7 +11,11 @@ import { errorHandler } from '../middlewares/errorHandler';
 import { AxiosHttpClient } from '../infra/http/AxiosHttpClient';
 import { ChatService } from '../services/ChatService';
 import { ChatController } from '../controllers/ChatController';
+import { AuthService } from '../services/AuthService';
+import { AuthController } from '../controllers/AuthController';
 import { createChatRoutes } from '../routes/chatRoutes';
+import { createAuthRoutes } from '../routes/authRoutes';
+import { authMiddleware } from '../middlewares/authMiddleware';
 
 /**
  * Initialize Express application
@@ -61,16 +65,24 @@ app.use(corsMiddleware);
 // Infrastructure layer: HTTP client dengan retry logic
 const httpClient = new AxiosHttpClient();
 
-// Application layer: Business logic service
+// Application layer: Business logic services
 const chatService = new ChatService(httpClient);
+const authService = new AuthService();
 
-// Presentation layer: HTTP request/response controller
+// Presentation layer: HTTP request/response controllers
 const chatController = new ChatController(chatService);
+const authController = new AuthController(authService);
 
-// Routes: API endpoints dengan controller
+// Routes: API endpoints dengan controllers
+const authRoutes = createAuthRoutes(authController);
 const chatRoutes = createChatRoutes(chatController);
 
 // 5. Mount routes
+// Auth routes (public - no auth required)
+app.use(authRoutes);
+
+// Chat routes (protected - auth required)
+app.use('/api/chat', authMiddleware);
 app.use(chatRoutes);
 
 // 6. Global error handler (harus terakhir)
