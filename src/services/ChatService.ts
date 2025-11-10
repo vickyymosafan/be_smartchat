@@ -141,12 +141,21 @@ export class ChatService {
   /**
    * Get chat history untuk session tertentu
    * 
-   * @param sessionId - Session ID
+   * @param sessionId - Session ID (string identifier, not internal ID)
    * @param limit - Optional limit jumlah messages
    * @returns Array of messages
    */
   async getChatHistory(sessionId: string, limit?: number): Promise<any[]> {
-    const messages = await this.messageRepository.findBySessionId(sessionId, limit);
+    // Find session by sessionId string to get internal ID
+    const session = await this.sessionRepository.findBySessionId(sessionId);
+    
+    if (!session) {
+      logInfo('Session not found for history', { sessionId });
+      return [];
+    }
+    
+    // Use internal session ID to query messages
+    const messages = await this.messageRepository.findBySessionId(session.id, limit);
     return messages;
   }
 

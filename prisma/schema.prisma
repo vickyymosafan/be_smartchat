@@ -25,22 +25,39 @@ datasource db {
 // Each session has a unique sessionId and optional auth token
 // Tracks session metadata for security and analytics
 model Session {
-  id             String    @id @default(cuid())
-  sessionId      String    @unique
-  token          String?   @unique  // Auth token after PIN verification
-  expiresAt      DateTime            // Token expiry time
-  ipAddress      String?             // Client IP address
-  userAgent      String?             // Client user agent
-  lastActivityAt DateTime  @default(now()) // Last activity timestamp
-  messageCount   Int       @default(0)     // Total messages in session
-  createdAt      DateTime  @default(now())
+  id             String        @id @default(cuid())
+  sessionId      String        @unique
+  token          String?       @unique  // Auth token after PIN verification
+  expiresAt      DateTime                // Token expiry time
+  ipAddress      String?                 // Client IP address
+  userAgent      String?                 // Client user agent
+  lastActivityAt DateTime      @default(now()) // Last activity timestamp
+  messageCount   Int           @default(0)     // Total messages in session
+  createdAt      DateTime      @default(now())
   messages       Message[]
+  chatHistories  ChatHistory[]
   
   @@index([sessionId])
   @@index([token])
   @@index([ipAddress])
   @@index([lastActivityAt])
   @@map("sessions")
+}
+
+// ChatHistory model - Represents chat conversation threads
+// Each history entry represents a conversation with a title
+// Users can rename and delete history entries
+model ChatHistory {
+  id        String   @id @default(cuid())
+  sessionId String
+  title     String   // Auto-generated or user-defined title
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("chat_histories")
 }
 
 // Message model - Chat history

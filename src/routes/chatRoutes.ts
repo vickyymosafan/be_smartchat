@@ -21,7 +21,7 @@ export function createChatRoutes(chatController: ChatController): Router {
   const router = Router();
 
   /**
-   * POST /api/chat
+   * POST /
    * Forward chat request ke n8n webhook
    * 
    * Middleware stack:
@@ -29,22 +29,31 @@ export function createChatRoutes(chatController: ChatController): Router {
    * 2. chatController.handleChatRequest - Validate dan forward ke n8n
    */
   router.post(
-    '/api/chat',
+    '/',
     rateLimitMiddleware,
     (req, res, next) => chatController.handleChatRequest(req, res, next)
   );
 
   /**
-   * GET /api/chat/history/:sessionId
+   * GET /history/:sessionId
    * Get chat history untuk session tertentu
    * 
    * Query params:
    * - limit: Optional limit jumlah messages (default: all)
    */
   router.get(
-    '/api/chat/history/:sessionId',
+    '/history/:sessionId',
     (req, res, next) => chatController.handleGetHistory(req, res, next)
   );
+
+  return router;
+}
+
+/**
+ * Create health check route (separate, no auth needed)
+ */
+export function createHealthRoute(chatController: ChatController): Router {
+  const router = Router();
 
   /**
    * GET /health

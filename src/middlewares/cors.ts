@@ -47,7 +47,7 @@ export const corsMiddleware = cors({
     // Reject origin yang tidak di whitelist
     callback(new Error('Origin tidak diizinkan oleh CORS policy'));
   },
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 });

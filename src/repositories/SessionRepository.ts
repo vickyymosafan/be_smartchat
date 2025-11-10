@@ -80,6 +80,15 @@ export class SessionRepository {
   }
 
   /**
+   * Find session by internal ID
+   */
+  async findById(id: string): Promise<Session | null> {
+    return prisma.session.findUnique({
+      where: { id },
+    });
+  }
+
+  /**
    * Find session by sessionId
    */
   async findBySessionId(sessionId: string): Promise<Session | null> {

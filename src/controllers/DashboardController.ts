@@ -851,9 +851,14 @@ export class DashboardController {
     <div class="container">
         <div class="header">
             <h1>🚀 ChatSmart Backend Dashboard</h1>
-            <div class="health-status healthy" id="healthStatus">
-                <div class="health-dot healthy"></div>
-                <span>System Healthy</span>
+            <div style="display: flex; align-items: center; gap: var(--space-md);">
+                <div class="health-status healthy" id="healthStatus">
+                    <div class="health-dot healthy"></div>
+                    <span>System Healthy</span>
+                </div>
+                <button class="btn btn-secondary" onclick="logout()" id="logoutBtn" style="display: none; width: auto;">
+                    🚪 Logout
+                </button>
             </div>
         </div>
 
@@ -965,10 +970,39 @@ export class DashboardController {
         // Authentication
         let authToken = localStorage.getItem('chatAuthToken');
         
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // Clear token
+                localStorage.removeItem('chatAuthToken');
+                authToken = null;
+                
+                // Clear chat history
+                chatHistory = [];
+                
+                // Reset UI
+                document.getElementById('chatContainer').style.display = 'none';
+                document.getElementById('authContainer').style.display = 'flex';
+                document.getElementById('logoutBtn').style.display = 'none';
+                document.getElementById('pinInput').value = '';
+                document.getElementById('authStatus').textContent = '';
+                document.getElementById('chatResponse').innerHTML = '<div class="empty">Send a message to test N8N chat integration</div>';
+                
+                // Show logout message
+                const authStatus = document.getElementById('authStatus');
+                authStatus.className = 'auth-status success';
+                authStatus.textContent = '✓ Logged out successfully';
+                setTimeout(() => {
+                    authStatus.textContent = '';
+                }, 3000);
+            }
+        }
+        
         // Check if already authenticated on load
         if (authToken) {
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
+            document.getElementById('logoutBtn').style.display = 'block';
         }
         
         async function verifyPin() {
@@ -1013,6 +1047,7 @@ export class DashboardController {
                     setTimeout(() => {
                         document.getElementById('authContainer').style.display = 'none';
                         document.getElementById('chatContainer').style.display = 'flex';
+                        document.getElementById('logoutBtn').style.display = 'block';
                     }, 1000);
                 } else {
                     authStatus.className = 'auth-status error';
