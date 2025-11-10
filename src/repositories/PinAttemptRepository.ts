@@ -38,34 +38,5 @@ export class PinAttemptRepository {
     });
   }
 
-  /**
-   * Delete old attempts (cleanup)
-   */
-  async deleteOlderThan(daysAgo: number = 30): Promise<number> {
-    const since = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
-    
-    const result = await prisma.pinAttempt.deleteMany({
-      where: {
-        attemptAt: {
-          lt: since,
-        },
-      },
-    });
-    
-    return result.count;
-  }
 
-  /**
-   * Get recent attempts for IP
-   */
-  async findRecentByIp(
-    ipAddress: string,
-    limit: number = 10
-  ): Promise<PinAttempt[]> {
-    return prisma.pinAttempt.findMany({
-      where: { ipAddress },
-      orderBy: { attemptAt: 'desc' },
-      take: limit,
-    });
-  }
 }

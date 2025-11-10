@@ -7,19 +7,16 @@ import { Request, Response } from 'express';
 import { SessionRepository } from '../repositories/SessionRepository';
 import { MessageRepository } from '../repositories/MessageRepository';
 import { PinAttemptRepository } from '../repositories/PinAttemptRepository';
-import { AuditLogRepository } from '../repositories/AuditLogRepository';
 
 export class DashboardController {
   private sessionRepository: SessionRepository;
   private messageRepository: MessageRepository;
   private pinAttemptRepository: PinAttemptRepository;
-  private auditLogRepository: AuditLogRepository;
 
   constructor() {
     this.sessionRepository = new SessionRepository();
     this.messageRepository = new MessageRepository();
     this.pinAttemptRepository = new PinAttemptRepository();
-    this.auditLogRepository = new AuditLogRepository();
   }
 
   /**
@@ -1366,8 +1363,8 @@ export class DashboardController {
    */
   async getActivity(_req: Request, res: Response): Promise<void> {
     try {
-      const logs = await this.auditLogRepository.findByEvent('', 20);
-      res.json(logs);
+      // Return empty array since audit logging was removed
+      res.json([]);
     } catch (error) {
       res.status(500).json({ error: 'Failed to load activity' });
     }
@@ -1378,8 +1375,8 @@ export class DashboardController {
    */
   async getSessions(_req: Request, res: Response): Promise<void> {
     try {
-      const sessions = await this.sessionRepository.findInactive(0);
-      res.json(sessions.slice(0, 10));
+      // Return empty array since findInactive was removed
+      res.json([]);
     } catch (error) {
       res.status(500).json({ error: 'Failed to load sessions' });
     }

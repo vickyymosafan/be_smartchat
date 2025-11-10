@@ -86,6 +86,3 @@ export async function authMiddleware(
     next(error);
   }
 }
-
-// Export authService untuk digunakan di controller
-export { authService };

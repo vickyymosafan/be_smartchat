@@ -21,15 +21,6 @@ export class ChatHistoryRepository {
   }
 
   /**
-   * Get all chat histories (across all sessions)
-   */
-  async findAll() {
-    return this.prisma.chatHistory.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  /**
    * Get all chat histories with session data (optimized with join)
    * Avoids N+1 query problem
    */
@@ -39,25 +30,6 @@ export class ChatHistoryRepository {
         session: true,
       },
       orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  /**
-   * Get all chat histories for a session
-   */
-  async findBySessionId(sessionId: string) {
-    return this.prisma.chatHistory.findMany({
-      where: { sessionId },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  /**
-   * Get single chat history by ID
-   */
-  async findById(id: string) {
-    return this.prisma.chatHistory.findUnique({
-      where: { id },
     });
   }
 

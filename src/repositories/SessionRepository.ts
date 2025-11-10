@@ -39,52 +39,11 @@ export class SessionRepository {
   }
 
   /**
-   * Get inactive sessions (no activity for N days)
-   */
-  async findInactive(daysAgo: number = 30): Promise<Session[]> {
-    const since = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
-    
-    return prisma.session.findMany({
-      where: {
-        lastActivityAt: {
-          lt: since,
-        },
-      },
-    });
-  }
-
-  /**
-   * Delete inactive sessions
-   */
-  async deleteInactive(daysAgo: number = 30): Promise<number> {
-    const since = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
-    
-    const result = await prisma.session.deleteMany({
-      where: {
-        lastActivityAt: {
-          lt: since,
-        },
-      },
-    });
-    
-    return result.count;
-  }
-
-  /**
    * Find session by token
    */
   async findByToken(token: string): Promise<Session | null> {
     return prisma.session.findUnique({
       where: { token },
-    });
-  }
-
-  /**
-   * Find session by internal ID
-   */
-  async findById(id: string): Promise<Session | null> {
-    return prisma.session.findUnique({
-      where: { id },
     });
   }
 

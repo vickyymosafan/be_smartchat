@@ -11,7 +11,6 @@ import { z } from 'zod';
  * Fields:
  * - message: string wajib, minimal 1 karakter
  * - userId: string opsional
- * - metadata: object opsional dengan key-value pairs
  */
 export const chatRequestSchema = z.object({
   message: z
@@ -24,12 +23,6 @@ export const chatRequestSchema = z.object({
   userId: z
     .string({
       invalid_type_error: 'Field userId harus berupa string',
-    })
-    .optional(),
-  
-  metadata: z
-    .record(z.any(), {
-      invalid_type_error: 'Field metadata harus berupa object',
     })
     .optional(),
 });

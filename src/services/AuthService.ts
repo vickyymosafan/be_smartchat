@@ -9,7 +9,6 @@ import crypto from 'crypto';
 import { config } from '../config/env';
 import { SessionRepository } from '../repositories/SessionRepository';
 import { PinAttemptRepository } from '../repositories/PinAttemptRepository';
-import { AuditService, AuditEvent } from './AuditService';
 import { logInfo, logWarn } from '../infra/log/logger';
 
 /**
@@ -30,12 +29,10 @@ const BLOCK_DURATION_MINUTES = 15;
 export class AuthService {
   private sessionRepository: SessionRepository;
   private pinAttemptRepository: PinAttemptRepository;
-  private auditService: AuditService;
 
   constructor() {
     this.sessionRepository = new SessionRepository();
     this.pinAttemptRepository = new PinAttemptRepository();
-    this.auditService = new AuditService();
   }
   /**
    * Check if IP is blocked due to too many failed attempts
@@ -64,12 +61,6 @@ export class AuthService {
     // Check if IP is blocked
     const isBlocked = await this.isIpBlocked(ipAddress);
     if (isBlocked) {
-      await this.auditService.log(AuditEvent.PIN_BLOCKED, {
-        ipAddress,
-        success: false,
-        details: { reason: 'Too many failed attempts' },
-      });
-
       logWarn('PIN verification blocked', { ipAddress });
 
       return {
@@ -83,12 +74,6 @@ export class AuthService {
       await this.pinAttemptRepository.create({
         ipAddress,
         success: false,
-      });
-
-      await this.auditService.log(AuditEvent.PIN_VERIFY_FAILED, {
-        ipAddress,
-        success: false,
-        details: { reason: 'Invalid format' },
       });
 
       return {
@@ -117,19 +102,10 @@ export class AuthService {
       success: isValid,
     });
 
-    // Log audit event
+    // Log result
     if (isValid) {
-      await this.auditService.log(AuditEvent.PIN_VERIFY_SUCCESS, {
-        ipAddress,
-        success: true,
-      });
       logInfo('PIN verification successful', { ipAddress });
     } else {
-      await this.auditService.log(AuditEvent.PIN_VERIFY_FAILED, {
-        ipAddress,
-        success: false,
-        details: { reason: 'Incorrect PIN' },
-      });
       logWarn('PIN verification failed', { ipAddress });
     }
 
@@ -168,13 +144,6 @@ export class AuthService {
 
     // Cleanup expired tokens
     await this.cleanupExpiredTokens();
-
-    // Log audit event
-    await this.auditService.log(AuditEvent.TOKEN_GENERATED, {
-      ipAddress,
-      sessionId,
-      success: true,
-    });
 
     logInfo('Token generated and stored in database', {
       sessionId,
