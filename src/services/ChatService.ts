@@ -10,6 +10,11 @@ import { config } from '../config/env';
 import { MessageRepository } from '../repositories/MessageRepository';
 import { SessionRepository } from '../repositories/SessionRepository';
 import { logInfo, logError } from '../infra/log/logger';
+import {
+  generateSessionId,
+  calculateExpiryDate,
+  SESSION_EXPIRY,
+} from '../utils/sessionUtils';
 
 /**
  * Service untuk menangani chat request
@@ -52,7 +57,7 @@ export class ChatService {
    * @throws Error jika request gagal setelah retry
    */
   async forwardToN8n(payload: ChatRequest): Promise<any> {
-    const sessionId = payload.userId || this.generateSessionId();
+    const sessionId = payload.userId || generateSessionId();
 
     try {
       // Ensure session exists di database and get internal ID
@@ -129,7 +134,7 @@ export class ChatService {
     }
     
     // Create new session dengan expiry 30 hari
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const expiresAt = calculateExpiryDate(SESSION_EXPIRY.REGULAR_SESSION);
     const newSession = await this.sessionRepository.create({
       sessionId,
       expiresAt,
@@ -174,13 +179,4 @@ export class ChatService {
     }
   }
 
-  /**
-   * Generate random session ID jika userId tidak ada
-   * Format: session-{timestamp}-{random}
-   */
-  private generateSessionId(): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 9);
-    return `session-${timestamp}-${random}`;
-  }
 }

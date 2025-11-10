@@ -2,19 +2,19 @@
  * Auth Service
  * Handle PIN verification dan token management
  * Menggunakan database untuk persist tokens
- * Includes brute force protection dan audit logging
+ * Includes brute force protection
  */
 
-import crypto from 'crypto';
 import { config } from '../config/env';
 import { SessionRepository } from '../repositories/SessionRepository';
 import { PinAttemptRepository } from '../repositories/PinAttemptRepository';
 import { logInfo, logWarn } from '../infra/log/logger';
-
-/**
- * Token expiry duration (24 hours in milliseconds)
- */
-const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000;
+import {
+  generateAuthToken,
+  generateSessionId,
+  calculateExpiryDate,
+  SESSION_EXPIRY,
+} from '../utils/sessionUtils';
 
 /**
  * Max failed PIN attempts before blocking
@@ -127,12 +127,9 @@ export class AuthService {
     ipAddress?: string,
     userAgent?: string
   ): Promise<string> {
-    const randomBytes = crypto.randomBytes(32);
-    const token = `auth_${randomBytes.toString('hex')}`;
-    
-    // Store token ke database dengan expiry time dan metadata
-    const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_MS);
-    const sessionId = `session-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    const token = generateAuthToken();
+    const sessionId = generateSessionId();
+    const expiresAt = calculateExpiryDate(SESSION_EXPIRY.AUTH_TOKEN);
 
     await this.sessionRepository.create({
       sessionId,

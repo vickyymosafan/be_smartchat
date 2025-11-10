@@ -5,6 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { ChatHistoryService } from '../services/ChatHistoryService';
+import { sendValidationError, validateRequiredFields } from '../utils/validationUtils';
 
 export class ChatHistoryController {
   constructor(private chatHistoryService: ChatHistoryService) {}
@@ -19,17 +20,14 @@ export class ChatHistoryController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const { sessionId, firstMessage } = req.body;
-
-      if (!sessionId || !firstMessage) {
-        res.status(400).json({
-          ok: false,
-          code: 'VALIDATION_ERROR',
-          message: 'sessionId and firstMessage are required',
-        });
+      const validation = validateRequiredFields(req.body, ['sessionId', 'firstMessage']);
+      
+      if (!validation.isValid) {
+        sendValidationError(res, `${validation.missing.join(', ')} are required`);
         return;
       }
 
+      const { sessionId, firstMessage } = req.body;
       const history = await this.chatHistoryService.createFromMessage(
         sessionId,
         firstMessage
@@ -76,17 +74,14 @@ export class ChatHistoryController {
   ): Promise<void> {
     try {
       const { id } = req.params;
-      const { title } = req.body;
+      const validation = validateRequiredFields(req.body, ['title']);
 
-      if (!title) {
-        res.status(400).json({
-          ok: false,
-          code: 'VALIDATION_ERROR',
-          message: 'title is required',
-        });
+      if (!validation.isValid) {
+        sendValidationError(res, 'title is required');
         return;
       }
 
+      const { title } = req.body;
       const updated = await this.chatHistoryService.renameHistory(id, title);
 
       res.status(200).json({

@@ -6,6 +6,7 @@
 import { ChatHistoryRepository } from '../repositories/ChatHistoryRepository';
 import { SessionRepository } from '../repositories/SessionRepository';
 import { logInfo, logError } from '../infra/log/logger';
+import { calculateExpiryDate, SESSION_EXPIRY } from '../utils/sessionUtils';
 
 export class ChatHistoryService {
   private chatHistoryRepository: ChatHistoryRepository;
@@ -45,7 +46,7 @@ export class ChatHistoryService {
       
       if (!session) {
         // Create new session if not exists
-        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        const expiresAt = calculateExpiryDate(SESSION_EXPIRY.REGULAR_SESSION);
         session = await this.sessionRepository.create({
           sessionId,
           expiresAt,
