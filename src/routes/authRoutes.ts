@@ -29,6 +29,7 @@ const pinRateLimiter = rateLimit({
  * 
  * Routes:
  * - POST /api/auth/verify-pin: Verify PIN dan generate token (dengan rate limiting)
+ * - POST /api/auth/logout: Revoke token dan logout
  * 
  * @param authController - Controller instance untuk handle requests
  * @returns Express router dengan routes terdefinisi
@@ -48,6 +49,16 @@ export function createAuthRoutes(authController: AuthController): Router {
     '/api/auth/verify-pin',
     pinRateLimiter,
     (req, res, next) => authController.handleVerifyPin(req, res, next)
+  );
+
+  /**
+   * POST /api/auth/logout
+   * Revoke authentication token
+   * No rate limiting needed for logout
+   */
+  router.post(
+    '/api/auth/logout',
+    (req, res, next) => authController.handleLogout(req, res, next)
   );
 
   return router;

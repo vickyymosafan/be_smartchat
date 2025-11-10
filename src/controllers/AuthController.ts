@@ -16,6 +16,49 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   /**
+   * Handle POST /api/auth/logout request
+   * 
+   * Flow:
+   * 1. Extract token dari Authorization header
+   * 2. Revoke token dengan authService
+   * 3. Return success response
+   * 
+   * @param req - Express request object
+   * @param res - Express response object
+   * @param next - Express next function untuk error handling
+   */
+  async handleLogout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader) {
+        res.status(200).json({
+          ok: true,
+          message: 'Logout berhasil',
+        });
+        return;
+      }
+
+      const parts = authHeader.split(' ');
+      if (parts.length === 2 && parts[0] === 'Bearer') {
+        const token = parts[1];
+        await this.authService.revokeToken(token);
+        
+        logInfo('User logged out', {
+          ip: req.ip,
+        });
+      }
+
+      res.status(200).json({
+        ok: true,
+        message: 'Logout berhasil',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Handle POST /api/auth/verify-pin request
    * 
    * Flow:
