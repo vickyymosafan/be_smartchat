@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ChatSmart Database Schema
+// ============================================
+// Authentication: PIN-based (no email/password)
+// Sessions: Anonymous, identified by sessionId
+// Messages: Chat history per session
+// Security: PIN attempt tracking, audit logging
+// ============================================
+
+// Session model - Represents user sessions
+// Authentication is PIN-based, sessions are anonymous
+// Each session has a unique sessionId and optional auth token
+// Tracks session metadata for security and analytics
+model Session {
+  id             String    @id @default(cuid())
+  sessionId      String    @unique
+  token          String?   @unique  // Auth token after PIN verification
+  expiresAt      DateTime            // Token expiry time
+  ipAddress      String?             // Client IP address
+  userAgent      String?             // Client user agent
+  lastActivityAt DateTime  @default(now()) // Last activity timestamp
+  messageCount   Int       @default(0)     // Total messages in session
+  createdAt      DateTime  @default(now())
+  messages       Message[]
+  
+  @@index([sessionId])
+  @@index([token])
+  @@index([ipAddress])
+  @@index([lastActivityAt])
+  @@map("sessions")
+}
+
+// Message model - Chat history
+// Stores all messages (user and assistant) per session
+model Message {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String   // 'user' or 'assistant'
+  content   String
+  createdAt DateTime @default(now())
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// PinAttempt model - Track PIN verification attempts
+// Used for brute force protection and security monitoring
+model PinAttempt {
+  id         String   @id @default(cuid())
+  ipAddress  String
+  success    Boolean  @default(false)
+  attemptAt  DateTime @default(now())
+  
+  @@index([ipAddress, attemptAt])
+  @@map("pin_attempts")
+}
+
+// AuditLog model - Security and system event logging
+// Tracks all important events for monitoring and debugging
+model AuditLog {
+  id        String   @id @default(cuid())
+  event     String   // Event type (e.g., 'PIN_VERIFY', 'TOKEN_GENERATE', 'MESSAGE_SENT')
+  ipAddress String?
+  sessionId String?
+  success   Boolean  @default(true)
+  details   String?  // JSON string with additional details
+  createdAt DateTime @default(now())
+  
+  @@index([event, createdAt])
+  @@index([ipAddress])
+  @@index([sessionId])
+  @@map("audit_logs")
+}

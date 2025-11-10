@@ -15,6 +15,8 @@ import { AuthService } from '../services/AuthService';
 import { AuthController } from '../controllers/AuthController';
 import { createChatRoutes } from '../routes/chatRoutes';
 import { createAuthRoutes } from '../routes/authRoutes';
+import { createDashboardRoutes } from '../routes/dashboardRoutes';
+import { DashboardController } from '../controllers/DashboardController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 /**
@@ -45,8 +47,12 @@ app.set('trust proxy', 1);
  * Middleware Stack
  */
 
-// 1. Security headers
-app.use(helmet());
+// 1. Security headers with CSP disabled for dashboard
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+  })
+);
 
 // 2. Body parser dengan size limit
 app.use(express.json({ limit: '1mb' }));
@@ -72,12 +78,17 @@ const authService = new AuthService();
 // Presentation layer: HTTP request/response controllers
 const chatController = new ChatController(chatService);
 const authController = new AuthController(authService);
+const dashboardController = new DashboardController();
 
 // Routes: API endpoints dengan controllers
 const authRoutes = createAuthRoutes(authController);
 const chatRoutes = createChatRoutes(chatController);
+const dashboardRoutes = createDashboardRoutes(dashboardController);
 
 // 5. Mount routes
+// Dashboard routes (public - for monitoring)
+app.use(dashboardRoutes);
+
 // Auth routes (public - no auth required)
 app.use(authRoutes);
 

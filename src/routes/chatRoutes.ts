@@ -35,11 +35,23 @@ export function createChatRoutes(chatController: ChatController): Router {
   );
 
   /**
+   * GET /api/chat/history/:sessionId
+   * Get chat history untuk session tertentu
+   * 
+   * Query params:
+   * - limit: Optional limit jumlah messages (default: all)
+   */
+  router.get(
+    '/api/chat/history/:sessionId',
+    (req, res, next) => chatController.handleGetHistory(req, res, next)
+  );
+
+  /**
    * GET /health
    * Health check endpoint untuk monitoring
    * 
    * Tidak ada rate limiting untuk health check
-   * Tidak melakukan call ke sistem eksternal
+   * Check database connection status
    */
   router.get(
     '/health',

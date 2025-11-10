@@ -29,7 +29,7 @@ export class AuthController {
    * @param res - Express response object
    * @param next - Express next function untuk error handling
    */
-  handleVerifyPin(req: Request, res: Response, next: NextFunction): void {
+  async handleVerifyPin(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Validate request body
       const validation = pinVerifySchema.safeParse(req.body);
@@ -51,28 +51,35 @@ export class AuthController {
 
       const { pin } = validation.data;
 
-      // Verify PIN
-      const isValid = this.authService.verifyPin(pin);
+      // Get client info
+      const ipAddress = (req.ip || req.socket.remoteAddress || 'unknown').replace('::ffff:', '');
+      const userAgent = req.headers['user-agent'] || 'unknown';
 
-      if (!isValid) {
-        logWarn('PIN verification failed: Invalid PIN', {
-          ip: req.ip,
+      // Verify PIN with brute force protection
+      const result = await this.authService.verifyPin(pin, ipAddress);
+
+      if (!result.valid) {
+        logWarn('PIN verification failed', {
+          ip: ipAddress,
+          message: result.message,
         });
 
         res.status(401).json({
           ok: false,
           code: 'INVALID_PIN',
-          message: 'PIN yang Anda masukkan salah',
+          message: result.message || 'PIN yang Anda masukkan salah',
         });
         return;
       }
 
-      // Generate token
-      const token = this.authService.generateToken();
+      // Generate token (async - save to database with metadata)
+      const token = await this.authService.generateToken(ipAddress, userAgent);
+
+      const activeTokens = await this.authService.getActiveTokensCount();
 
       logInfo('PIN verification successful', {
-        ip: req.ip,
-        activeTokens: this.authService.getActiveTokensCount(),
+        ip: ipAddress,
+        activeTokens,
       });
 
       res.status(200).json({

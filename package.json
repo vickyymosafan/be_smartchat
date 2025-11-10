@@ -5,11 +5,19 @@
   "main": "dist/server/bootstrap.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/server/bootstrap.ts",
-    "build": "tsc",
+    "build": "npm run prisma:generate && tsc",
     "start": "node dist/server/bootstrap.js",
-    "vercel-build": "echo 'Building for Vercel...' && npm run build"
+    "vercel-build": "echo 'Building for Vercel...' && npm run build",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "db:push": "prisma db push",
+    "db:reset": "prisma migrate reset"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.0",
     "axios": "^1.6.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -17,6 +25,7 @@
     "express-rate-limit": "^7.1.0",
     "helmet": "^7.1.0",
     "morgan": "^1.10.0",
+    "prisma": "^6.19.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {

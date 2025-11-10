@@ -15,17 +15,17 @@ const authService = new AuthService();
  * 
  * Flow:
  * 1. Extract token dari Authorization header
- * 2. Validate token dengan AuthService
+ * 2. Validate token dengan AuthService (async - check database)
  * 3. Jika valid: allow request
  * 4. Jika invalid: return 401 Unauthorized
  * 
  * Header format: Authorization: Bearer <token>
  */
-export function authMiddleware(
+export async function authMiddleware(
   req: Request,
   res: Response,
   next: NextFunction
-): void {
+): Promise<void> {
   try {
     // Extract token dari Authorization header
     const authHeader = req.headers.authorization;
@@ -63,8 +63,8 @@ export function authMiddleware(
 
     const token = parts[1];
 
-    // Validate token
-    const isValid = authService.validateToken(token);
+    // Validate token (async - check database)
+    const isValid = await authService.validateToken(token);
 
     if (!isValid) {
       logWarn('Auth middleware: Invalid or expired token', {

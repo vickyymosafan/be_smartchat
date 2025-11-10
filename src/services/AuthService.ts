@@ -1,85 +1,206 @@
 /**
  * Auth Service
  * Handle PIN verification dan token management
+ * Menggunakan database untuk persist tokens
+ * Includes brute force protection dan audit logging
  */
 
 import crypto from 'crypto';
 import { config } from '../config/env';
-
-/**
- * Token storage
- * In-memory storage untuk active tokens
- * Format: Map<token, expiryTimestamp>
- */
-const activeTokens = new Map<string, number>();
+import { SessionRepository } from '../repositories/SessionRepository';
+import { PinAttemptRepository } from '../repositories/PinAttemptRepository';
+import { AuditService, AuditEvent } from './AuditService';
+import { logInfo, logWarn } from '../infra/log/logger';
 
 /**
  * Token expiry duration (24 hours in milliseconds)
  */
 const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Max failed PIN attempts before blocking
+ */
+const MAX_FAILED_ATTEMPTS = 5;
+
+/**
+ * Block duration in minutes after max attempts
+ */
+const BLOCK_DURATION_MINUTES = 15;
+
 export class AuthService {
+  private sessionRepository: SessionRepository;
+  private pinAttemptRepository: PinAttemptRepository;
+  private auditService: AuditService;
+
+  constructor() {
+    this.sessionRepository = new SessionRepository();
+    this.pinAttemptRepository = new PinAttemptRepository();
+    this.auditService = new AuditService();
+  }
   /**
-   * Verify PIN code
+   * Check if IP is blocked due to too many failed attempts
+   */
+  async isIpBlocked(ipAddress: string): Promise<boolean> {
+    const failedCount = await this.pinAttemptRepository.countFailedAttempts(
+      ipAddress,
+      BLOCK_DURATION_MINUTES
+    );
+
+    return failedCount >= MAX_FAILED_ATTEMPTS;
+  }
+
+  /**
+   * Verify PIN code with brute force protection
    * Constant-time comparison untuk prevent timing attacks
    * 
    * @param pin - PIN yang diinput user
-   * @returns true jika PIN valid, false jika tidak
+   * @param ipAddress - Client IP address
+   * @returns Object dengan status dan message
    */
-  verifyPin(pin: string): boolean {
-    const expectedPin = config.PIN_CODE;
-    
-    // Constant-time comparison
-    if (pin.length !== expectedPin.length) {
-      return false;
+  async verifyPin(
+    pin: string,
+    ipAddress: string
+  ): Promise<{ valid: boolean; message?: string }> {
+    // Check if IP is blocked
+    const isBlocked = await this.isIpBlocked(ipAddress);
+    if (isBlocked) {
+      await this.auditService.log(AuditEvent.PIN_BLOCKED, {
+        ipAddress,
+        success: false,
+        details: { reason: 'Too many failed attempts' },
+      });
+
+      logWarn('PIN verification blocked', { ipAddress });
+
+      return {
+        valid: false,
+        message: `Terlalu banyak percobaan gagal. Coba lagi dalam ${BLOCK_DURATION_MINUTES} menit.`,
+      };
     }
 
+    // Validate PIN format (must be 6 digits)
+    if (!/^\d{6}$/.test(pin)) {
+      await this.pinAttemptRepository.create({
+        ipAddress,
+        success: false,
+      });
+
+      await this.auditService.log(AuditEvent.PIN_VERIFY_FAILED, {
+        ipAddress,
+        success: false,
+        details: { reason: 'Invalid format' },
+      });
+
+      return {
+        valid: false,
+        message: 'PIN harus 6 digit angka',
+      };
+    }
+
+    const expectedPin = config.PIN_CODE;
+
+    // Constant-time comparison
     let isValid = true;
-    for (let i = 0; i < pin.length; i++) {
-      if (pin[i] !== expectedPin[i]) {
-        isValid = false;
+    if (pin.length !== expectedPin.length) {
+      isValid = false;
+    } else {
+      for (let i = 0; i < pin.length; i++) {
+        if (pin[i] !== expectedPin[i]) {
+          isValid = false;
+        }
       }
     }
 
-    return isValid;
+    // Record attempt
+    await this.pinAttemptRepository.create({
+      ipAddress,
+      success: isValid,
+    });
+
+    // Log audit event
+    if (isValid) {
+      await this.auditService.log(AuditEvent.PIN_VERIFY_SUCCESS, {
+        ipAddress,
+        success: true,
+      });
+      logInfo('PIN verification successful', { ipAddress });
+    } else {
+      await this.auditService.log(AuditEvent.PIN_VERIFY_FAILED, {
+        ipAddress,
+        success: false,
+        details: { reason: 'Incorrect PIN' },
+      });
+      logWarn('PIN verification failed', { ipAddress });
+    }
+
+    return {
+      valid: isValid,
+      message: isValid ? undefined : 'PIN yang Anda masukkan salah',
+    };
   }
 
   /**
    * Generate secure random token
+   * Simpan ke database untuk persistence
    * 
+   * @param ipAddress - Client IP address
+   * @param userAgent - Client user agent
    * @returns Random token string
    */
-  generateToken(): string {
+  async generateToken(
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<string> {
     const randomBytes = crypto.randomBytes(32);
     const token = `auth_${randomBytes.toString('hex')}`;
     
-    // Store token dengan expiry time
-    const expiryTime = Date.now() + TOKEN_EXPIRY_MS;
-    activeTokens.set(token, expiryTime);
+    // Store token ke database dengan expiry time dan metadata
+    const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_MS);
+    const sessionId = `session-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+
+    await this.sessionRepository.create({
+      sessionId,
+      token,
+      expiresAt,
+      ipAddress,
+      userAgent,
+    });
 
     // Cleanup expired tokens
-    this.cleanupExpiredTokens();
+    await this.cleanupExpiredTokens();
+
+    // Log audit event
+    await this.auditService.log(AuditEvent.TOKEN_GENERATED, {
+      ipAddress,
+      sessionId,
+      success: true,
+    });
+
+    logInfo('Token generated and stored in database', {
+      sessionId,
+      ipAddress,
+    });
 
     return token;
   }
 
   /**
    * Validate token
-   * Check if token exists dan belum expired
+   * Check if token exists di database dan belum expired
    * 
    * @param token - Token yang akan divalidasi
    * @returns true jika token valid, false jika tidak
    */
-  validateToken(token: string): boolean {
-    const expiryTime = activeTokens.get(token);
+  async validateToken(token: string): Promise<boolean> {
+    const session = await this.sessionRepository.findByToken(token);
 
-    if (!expiryTime) {
+    if (!session) {
       return false; // Token tidak ditemukan
     }
 
-    if (Date.now() > expiryTime) {
-      // Token expired, hapus dari storage
-      activeTokens.delete(token);
+    if (new Date() > session.expiresAt) {
+      // Token expired, hapus dari database
+      await this.sessionRepository.deleteByToken(token);
       return false;
     }
 
@@ -88,32 +209,31 @@ export class AuthService {
 
   /**
    * Revoke token (logout)
+   * Hapus dari database
    * 
    * @param token - Token yang akan di-revoke
    */
-  revokeToken(token: string): void {
-    activeTokens.delete(token);
+  async revokeToken(token: string): Promise<void> {
+    await this.sessionRepository.deleteByToken(token);
+    logInfo('Token revoked', { token: token.substring(0, 10) + '...' });
   }
 
   /**
-   * Cleanup expired tokens dari memory
+   * Cleanup expired tokens dari database
    * Dipanggil setiap kali generate token baru
    */
-  private cleanupExpiredTokens(): void {
-    const now = Date.now();
-    
-    for (const [token, expiryTime] of activeTokens.entries()) {
-      if (now > expiryTime) {
-        activeTokens.delete(token);
-      }
+  async cleanupExpiredTokens(): Promise<void> {
+    const deletedCount = await this.sessionRepository.deleteExpired();
+    if (deletedCount > 0) {
+      logInfo('Cleaned up expired tokens', { count: deletedCount });
     }
   }
 
   /**
    * Get active tokens count (untuk monitoring)
    */
-  getActiveTokensCount(): number {
-    this.cleanupExpiredTokens();
-    return activeTokens.size;
+  async getActiveTokensCount(): Promise<number> {
+    await this.cleanupExpiredTokens();
+    return await this.sessionRepository.countActive();
   }
 }

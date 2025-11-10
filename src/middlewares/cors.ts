@@ -28,6 +28,17 @@ export const corsMiddleware = cors({
       return callback(null, true);
     }
 
+    // Allow same-origin requests (dashboard di localhost:PORT)
+    const serverPort = config.PORT || 3001;
+    const allowedLocalOrigins = [
+      `http://localhost:${serverPort}`,
+      `http://127.0.0.1:${serverPort}`,
+    ];
+
+    if (allowedLocalOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
     // Check apakah origin ada di whitelist
     if (config.FRONTEND_ORIGINS.includes(origin)) {
       return callback(null, true);
