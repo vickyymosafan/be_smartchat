@@ -847,7 +847,7 @@ export class DashboardController {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 ChatSmart Backend Dashboard</h1>
+            <h1>🚀 Smartchat Backend Dashboard</h1>
             <div style="display: flex; align-items: center; gap: var(--space-md);">
                 <div class="health-status healthy" id="healthStatus">
                     <div class="health-dot healthy"></div>
