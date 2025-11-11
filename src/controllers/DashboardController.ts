@@ -4,13 +4,13 @@
  */
 
 import { Request, Response } from 'express';
-import { DashboardService } from '../services/DashboardService';
+import { SessionRepository } from '../repositories/SessionRepository';
 
 export class DashboardController {
-  private dashboardService: DashboardService;
+  private sessionRepository: SessionRepository;
 
-  constructor(dashboardService?: DashboardService) {
-    this.dashboardService = dashboardService || new DashboardService();
+  constructor() {
+    this.sessionRepository = new SessionRepository();
   }
 
   /**
@@ -1179,8 +1179,12 @@ export class DashboardController {
    */
   async getStats(_req: Request, res: Response): Promise<void> {
     try {
-      const stats = await this.dashboardService.getStatistics();
-      res.json(stats);
+      const activeSessions = await this.sessionRepository.countActive();
+      res.json({
+        totalSessions: activeSessions,
+        activeSessions,
+        totalMessages: 0,
+      });
     } catch (error) {
       res.status(500).json({ error: 'Failed to load statistics' });
     }
@@ -1191,8 +1195,7 @@ export class DashboardController {
    */
   async getActivity(_req: Request, res: Response): Promise<void> {
     try {
-      const activity = await this.dashboardService.getRecentActivity();
-      res.json(activity);
+      res.json([]);
     } catch (error) {
       res.status(500).json({ error: 'Failed to load activity' });
     }
@@ -1203,8 +1206,14 @@ export class DashboardController {
    */
   async getSessions(_req: Request, res: Response): Promise<void> {
     try {
-      const sessions = await this.dashboardService.getActiveSessions();
-      res.json(sessions);
+      const sessions = await this.sessionRepository.findInactive(30);
+      const sessionsWithData = sessions.map((session) => ({
+        sessionId: session.sessionId,
+        ipAddress: session.ipAddress,
+        messageCount: 0,
+        lastActivityAt: session.lastActivityAt,
+      }));
+      res.json(sessionsWithData);
     } catch (error) {
       res.status(500).json({ error: 'Failed to load sessions' });
     }

@@ -1,8 +1,6 @@
 import { ChatHistoryRepository } from '../repositories/ChatHistoryRepository';
 import { logInfo, logError } from '../infra/log/logger';
 import { SessionService } from './SessionService';
-import { generateTitleFromText, validateTitle } from '../utils/textUtils';
-import { checkResourceExists } from '../policies/ResourceExistencePolicy';
 
 export class ChatHistoryService {
   private chatHistoryRepository: ChatHistoryRepository;
@@ -16,10 +14,16 @@ export class ChatHistoryService {
     this.sessionService = sessionService || new SessionService();
   }
 
+  private generateTitle(text: string): string {
+    const cleaned = text.trim().replace(/\s+/g, ' ');
+    const firstSentence = cleaned.match(/^[^.!?]+[.!?]?/)?.[0] || cleaned;
+    return firstSentence.length > 50 ? firstSentence.substring(0, 47) + '...' : firstSentence;
+  }
+
   async createFromMessage(sessionId: string, firstMessage: string) {
     try {
       const sessionInternalId = await this.sessionService.ensureSessionExists(sessionId);
-      const title = generateTitleFromText(firstMessage);
+      const title = this.generateTitle(firstMessage);
 
       const history = await this.chatHistoryRepository.create({
         sessionId: sessionInternalId,
@@ -57,16 +61,17 @@ export class ChatHistoryService {
 
   async renameHistory(id: string, newTitle: string) {
     try {
-      const validation = validateTitle(newTitle);
-      if (!validation.valid) {
-        throw new Error(validation.error);
+      if (!newTitle || newTitle.trim().length === 0) {
+        throw new Error('Title cannot be empty');
+      }
+      if (newTitle.length > 100) {
+        throw new Error('Title too long (max 100 characters)');
       }
 
-      await checkResourceExists(
-        () => this.chatHistoryRepository.exists(id),
-        'Chat history',
-        id
-      );
+      const exists = await this.chatHistoryRepository.exists(id);
+      if (!exists) {
+        throw new Error('Chat history not found');
+      }
 
       const updated = await this.chatHistoryRepository.updateTitle(id, newTitle.trim());
       logInfo('Chat history renamed', { historyId: id, newTitle });
@@ -79,11 +84,10 @@ export class ChatHistoryService {
 
   async deleteHistory(id: string) {
     try {
-      await checkResourceExists(
-        () => this.chatHistoryRepository.exists(id),
-        'Chat history',
-        id
-      );
+      const exists = await this.chatHistoryRepository.exists(id);
+      if (!exists) {
+        throw new Error('Chat history not found');
+      }
 
       await this.chatHistoryRepository.delete(id);
       logInfo('Chat history deleted', { historyId: id });

@@ -1,6 +1,7 @@
-import { BaseRepository } from './BaseRepository';
+import { prisma } from '../infra/db/prisma';
 
-export class ChatHistoryRepository extends BaseRepository {
+export class ChatHistoryRepository {
+  private prisma = prisma;
 
   async create(data: {
     sessionId: string;

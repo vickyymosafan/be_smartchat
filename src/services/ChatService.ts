@@ -5,7 +5,6 @@ import { MessageRepository } from '../repositories/MessageRepository';
 import { logInfo, logError } from '../infra/log/logger';
 import { generateSessionId } from '../utils/sessionUtils';
 import { SessionService } from './SessionService';
-import { extractAssistantMessage } from '../adapters/N8nResponseAdapter';
 
 export class ChatService {
   private messageRepository: MessageRepository;
@@ -49,7 +48,7 @@ export class ChatService {
         }
       );
 
-      const assistantMessage = extractAssistantMessage(response.data);
+      const assistantMessage = response.data?.output || response.data?.message || JSON.stringify(response.data);
       await this.messageRepository.create({
         sessionId: sessionInternalId,
         role: 'assistant',
