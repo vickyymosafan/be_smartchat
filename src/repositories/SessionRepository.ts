@@ -66,4 +66,20 @@ export class SessionRepository {
       },
     });
   }
+
+  async findInactive(daysAgo: number = 30): Promise<Session[]> {
+    const since = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+    
+    return this.prisma.session.findMany({
+      where: {
+        lastActivityAt: {
+          gte: since,
+        },
+      },
+      orderBy: {
+        lastActivityAt: 'desc',
+      },
+      take: 20,
+    });
+  }
 }

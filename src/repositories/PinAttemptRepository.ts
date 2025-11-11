@@ -29,4 +29,19 @@ export class PinAttemptRepository {
       },
     });
   }
+
+  async findRecentByIp(
+    ipAddress: string,
+    limit: number = 10
+  ): Promise<PinAttempt[]> {
+    const where = ipAddress ? { ipAddress } : {};
+    
+    return this.prisma.pinAttempt.findMany({
+      where,
+      orderBy: {
+        attemptAt: 'desc',
+      },
+      take: limit,
+    });
+  }
 }

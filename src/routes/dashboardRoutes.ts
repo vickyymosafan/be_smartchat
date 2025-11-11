@@ -38,5 +38,21 @@ export function createDashboardRoutes(
     dashboardController.getStats(req, res)
   );
 
+  /**
+   * GET /api/dashboard/activity
+   * Get recent activity
+   */
+  router.get('/api/dashboard/activity', (req, res) =>
+    dashboardController.getActivity(req, res)
+  );
+
+  /**
+   * GET /api/dashboard/sessions
+   * Get active sessions
+   */
+  router.get('/api/dashboard/sessions', (req, res) =>
+    dashboardController.getSessions(req, res)
+  );
+
   return router;
 }

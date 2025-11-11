@@ -947,7 +947,8 @@ export class DashboardController {
                 const statusEl = document.getElementById('healthStatus');
                 
                 if (res.ok && data.ok === true) {
-                    const dbStatus = data.database === 'connected' ? '✓ DB Connected' : '⚠ DB Disconnected';
+                    // Response structure: { ok: true, data: { uptime, database } }
+                    const dbStatus = data.data?.database === 'connected' ? '✓ DB Connected' : '⚠ DB Disconnected';
                     statusEl.className = 'health-status healthy';
                     statusEl.innerHTML = '<div class="health-dot healthy"></div><span>System Healthy · ' + dbStatus + '</span>';
                 } else {
@@ -1352,6 +1353,54 @@ export class DashboardController {
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to load statistics' });
+    }
+  }
+
+  /**
+   * Get recent activity
+   */
+  async getActivity(_req: Request, res: Response): Promise<void> {
+    try {
+      // Get recent PIN attempts (last 20)
+      const recentAttempts = await this.pinAttemptRepository.findRecentByIp(
+        '',
+        20
+      );
+
+      // Transform to activity format
+      const activity = recentAttempts.map((attempt) => ({
+        event: attempt.success ? 'PIN Verified' : 'PIN Failed',
+        success: attempt.success,
+        ipAddress: attempt.ipAddress,
+        sessionId: null,
+        createdAt: attempt.attemptAt,
+      }));
+
+      res.json(activity);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to load activity' });
+    }
+  }
+
+  /**
+   * Get active sessions
+   */
+  async getSessions(_req: Request, res: Response): Promise<void> {
+    try {
+      // Get recent inactive sessions (last 30 days) as proxy for "active"
+      const sessions = await this.sessionRepository.findInactive(30);
+
+      // Transform to session format with message count
+      const sessionsWithData = sessions.map((session) => ({
+        sessionId: session.sessionId,
+        ipAddress: session.ipAddress,
+        messageCount: 0, // Placeholder - not implemented
+        lastActivityAt: session.lastActivityAt,
+      }));
+
+      res.json(sessionsWithData);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to load sessions' });
     }
   }
 

@@ -27,20 +27,18 @@ datasource db {
 model Session {
   id             String        @id @default(cuid())
   sessionId      String        @unique
-  token          String?       @unique  // Auth token after PIN verification
-  expiresAt      DateTime                // Token expiry time
-  ipAddress      String?                 // Client IP address
-  userAgent      String?                 // Client user agent
-  lastActivityAt DateTime      @default(now()) // Last activity timestamp
-  messageCount   Int           @default(0)     // Total messages in session
+  token          String?       @unique
+  expiresAt      DateTime
+  ipAddress      String?
+  userAgent      String?
+  lastActivityAt DateTime      @default(now())
+  messageCount   Int           @default(0)
   createdAt      DateTime      @default(now())
   messages       Message[]
   chatHistories  ChatHistory[]
   
   @@index([sessionId])
   @@index([token])
-  @@index([ipAddress])
-  @@index([lastActivityAt])
   @@map("sessions")
 }
 
