@@ -1,9 +1,3 @@
-/**
- * Chat Service
- * Business logic untuk forward request chat ke n8n webhook
- * Menyimpan chat history ke database
- */
-
 import { HttpClient } from '../core/http/HttpClient';
 import { ChatRequest } from '../schemas/chatSchemas';
 import { config } from '../config/env';
@@ -12,76 +6,36 @@ import { SessionRepository } from '../repositories/SessionRepository';
 import { logInfo, logError } from '../infra/log/logger';
 import { generateSessionId, calculateExpiryDate, SESSION_EXPIRY } from '../utils/sessionUtils';
 
-/**
- * Service untuk menangani chat request
- * Meneruskan request ke n8n webhook dengan retry mechanism (handled by HttpClient)
- */
 export class ChatService {
   private messageRepository: MessageRepository;
   private sessionRepository: SessionRepository;
 
-  /**
-   * Constructor dengan dependency injection
-   * @param httpClient - HTTP client untuk melakukan request (dependency inversion)
-   */
   constructor(private httpClient: HttpClient) {
     this.messageRepository = new MessageRepository();
     this.sessionRepository = new SessionRepository();
   }
 
-  /**
-   * Forward chat request ke n8n webhook
-   * 
-   * Flow:
-   * 1. Terima validated ChatRequest payload
-   * 2. Ensure session exists di database
-   * 3. Save user message ke database
-   * 4. Transform payload ke format n8n (message -> chatInput, tambah sessionId)
-   * 5. Call httpClient.post ke N8N_WEBHOOK_URL
-   * 6. Save assistant response ke database
-   * 7. Return response data jika sukses (2xx)
-   * 8. Throw error jika gagal
-   * 
-   * Error Handling:
-   * - Network errors: akan di-retry oleh HttpClient (max 2x)
-   * - 5xx errors: akan di-retry oleh HttpClient (max 2x)
-   * - 4xx errors: throw immediately (tidak retry)
-   * - Timeout: throw dengan pesan jelas
-   * 
-   * @param payload - Validated chat request payload
-   * @returns Response data dari n8n
-   * @throws Error jika request gagal setelah retry
-   */
   async forwardToN8n(payload: ChatRequest): Promise<any> {
     const sessionId = payload.userId || generateSessionId();
 
     try {
-      // Ensure session exists di database and get internal ID
       const sessionInternalId = await this.ensureSessionExists(sessionId);
 
-      // Save user message ke database (using internal session ID)
       await this.messageRepository.create({
         sessionId: sessionInternalId,
         role: 'user',
         content: payload.message,
       });
 
-      // Update session activity (using sessionId string)
       await this.sessionRepository.updateActivity(sessionId);
-
       logInfo('User message saved', { sessionId, messageLength: payload.message.length });
 
-      // Transform payload ke format n8n AI Agent
-      // N8n mengharapkan: { chatInput, sessionId }
-      const n8nPayload = {
-        chatInput: payload.message,
-        sessionId,
-      };
-
-      // Call n8n webhook dengan HttpClient
       const response = await this.httpClient.post(
         config.N8N_WEBHOOK_URL,
-        n8nPayload,
+        {
+          chatInput: payload.message,
+          sessionId,
+        },
         {
           timeout: config.N8N_TIMEOUT_MS,
           headers: {
@@ -90,7 +44,6 @@ export class ChatService {
         }
       );
 
-      // Save assistant response ke database (using internal session ID)
       const assistantMessage = response.data?.output || response.data?.message || JSON.stringify(response.data);
       await this.messageRepository.create({
         sessionId: sessionInternalId,
@@ -99,28 +52,15 @@ export class ChatService {
       });
 
       logInfo('Assistant response saved', { sessionId, responseLength: assistantMessage.length });
-
-      // Return data dari n8n jika sukses
       return response.data;
     } catch (error: any) {
-      // Log error
       logError('Failed to forward to n8n', error);
-
-      // Wrap error dengan context untuk debugging
-      const errorMessage = error.message || 'Unknown error';
-      const errorStatus = error.status || 'N/A';
-      
-      // Throw error dengan context yang jelas
       throw new Error(
-        `Gagal meneruskan request ke n8n: ${errorMessage} (Status: ${errorStatus})`
+        `Gagal meneruskan request ke n8n: ${error.message || 'Unknown error'} (Status: ${error.status || 'N/A'})`
       );
     }
   }
 
-  /**
-   * Ensure session exists in database
-   * If not exists, create new session with standard expiry
-   */
   private async ensureSessionExists(sessionId: string): Promise<string> {
     const existingSession = await this.sessionRepository.findBySessionId(sessionId);
     
@@ -138,13 +78,6 @@ export class ChatService {
     return newSession.id;
   }
 
-  /**
-   * Get chat history untuk session tertentu
-   * 
-   * @param sessionId - Session ID (string identifier, not internal ID)
-   * @param limit - Optional limit jumlah messages
-   * @returns Array of messages
-   */
   async getChatHistory(sessionId: string, limit?: number): Promise<any[]> {
     const session = await this.sessionRepository.findBySessionId(sessionId);
     
@@ -153,13 +86,9 @@ export class ChatService {
       return [];
     }
     
-    const messages = await this.messageRepository.findBySessionId(session.id, limit);
-    return messages;
+    return this.messageRepository.findBySessionId(session.id, limit);
   }
 
-  /**
-   * Check database health
-   */
   async checkDatabaseHealth(): Promise<boolean> {
     try {
       await this.sessionRepository.countActive();

@@ -1,16 +1,9 @@
 import PrismaService from '../infra/db/prisma';
 import { PinAttempt } from '../generated/prisma';
 
-/**
- * Repository untuk PIN Attempt operations
- * Track PIN verification attempts untuk security
- */
 export class PinAttemptRepository {
   private prisma = PrismaService.getClient();
 
-  /**
-   * Record PIN attempt
-   */
   async create(data: {
     ipAddress: string;
     success: boolean;
@@ -20,9 +13,6 @@ export class PinAttemptRepository {
     });
   }
 
-  /**
-   * Get failed attempts count for IP in last N minutes
-   */
   async countFailedAttempts(
     ipAddress: string,
     minutesAgo: number = 15

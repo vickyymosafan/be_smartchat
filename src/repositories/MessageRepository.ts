@@ -7,9 +7,6 @@ import { Message } from '../generated/prisma';
 export class MessageRepository {
   private prisma = PrismaService.getClient();
 
-  /**
-   * Create new message
-   */
   async create(data: {
     sessionId: string;
     role: string;
@@ -20,9 +17,6 @@ export class MessageRepository {
     });
   }
 
-  /**
-   * Get messages by session
-   */
   async findBySessionId(
     sessionId: string,
     limit?: number

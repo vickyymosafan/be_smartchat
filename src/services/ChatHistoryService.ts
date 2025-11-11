@@ -1,8 +1,3 @@
-/**
- * ChatHistory Service
- * Business logic untuk chat history management
- */
-
 import { ChatHistoryRepository } from '../repositories/ChatHistoryRepository';
 import { SessionRepository } from '../repositories/SessionRepository';
 import { logInfo, logError } from '../infra/log/logger';
@@ -17,18 +12,12 @@ export class ChatHistoryService {
     this.sessionRepository = new SessionRepository();
   }
 
-  /**
-   * Generate title from first message
-   */
   private generateTitle(text: string): string {
     const cleaned = text.trim().replace(/\s+/g, ' ');
     const firstSentence = cleaned.match(/^[^.!?]+[.!?]?/)?.[0] || cleaned;
     return firstSentence.length > 50 ? firstSentence.substring(0, 47) + '...' : firstSentence;
   }
 
-  /**
-   * Validate title
-   */
   private validateTitle(title: string): { valid: boolean; error?: string } {
     if (!title || title.trim().length === 0) {
       return { valid: false, error: 'Title cannot be empty' };
@@ -39,9 +28,6 @@ export class ChatHistoryService {
     return { valid: true };
   }
 
-  /**
-   * Create chat history from first message
-   */
   async createFromMessage(sessionId: string, firstMessage: string) {
     try {
       const sessionInternalId = await this.ensureSessionExists(sessionId);
@@ -64,15 +50,10 @@ export class ChatHistoryService {
     }
   }
 
-  /**
-   * Get all chat histories (across all sessions for single-user app)
-   * Optimized to avoid N+1 query problem
-   */
   async getAllHistories() {
     try {
       const histories = await this.chatHistoryRepository.findAllWithSession();
       
-      // Map histories to include actual sessionId string instead of internal ID
       return histories.map(history => ({
         id: history.id,
         sessionId: history.session.sessionId,
@@ -86,9 +67,6 @@ export class ChatHistoryService {
     }
   }
 
-  /**
-   * Rename chat history
-   */
   async renameHistory(id: string, newTitle: string) {
     try {
       const validation = this.validateTitle(newTitle);
@@ -110,9 +88,6 @@ export class ChatHistoryService {
     }
   }
 
-  /**
-   * Ensure session exists in database
-   */
   private async ensureSessionExists(sessionId: string): Promise<string> {
     const existingSession = await this.sessionRepository.findBySessionId(sessionId);
     
@@ -130,9 +105,6 @@ export class ChatHistoryService {
     return newSession.id;
   }
 
-  /**
-   * Delete chat history
-   */
   async deleteHistory(id: string) {
     try {
       const exists = await this.chatHistoryRepository.exists(id);

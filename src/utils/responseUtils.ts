@@ -1,13 +1,5 @@
-/**
- * Response Utilities
- * Standardized response formatting and validation for API endpoints
- */
-
 import { Response } from 'express';
 
-/**
- * Send success response with data
- */
 export function sendSuccess<T>(
   res: Response,
   data: T,
@@ -19,9 +11,6 @@ export function sendSuccess<T>(
   });
 }
 
-/**
- * Send success response with message only
- */
 export function sendSuccessMessage(
   res: Response,
   message: string,
@@ -33,9 +22,6 @@ export function sendSuccessMessage(
   });
 }
 
-/**
- * Send error response
- */
 export function sendError(
   res: Response,
   code: string,
@@ -56,9 +42,6 @@ export function sendError(
   res.status(statusCode).json(response);
 }
 
-/**
- * Send validation error response
- */
 export function sendValidationError(
   res: Response,
   message: string
@@ -70,9 +53,6 @@ export function sendValidationError(
   });
 }
 
-/**
- * Validate required fields in request body
- */
 export function validateRequiredFields(
   body: any,
   fields: string[]
