@@ -2,19 +2,9 @@ import { PrismaClient } from '../src/generated/prisma';
 
 const prisma = new PrismaClient();
 
-// Simple random string generator (no crypto dependency needed)
-function generateRandomToken(): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let token = 'auth_';
-  for (let i = 0; i < 64; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return token;
-}
-
 async function main() {
   console.log('🌱 Starting database seed...');
-  console.log('📌 Note: ChatSmart uses PIN-based authentication (no email/password)');
+  console.log('📌 Note: ChatSmart uses anonymous sessions (no authentication)');
 
   // Clean up expired sessions first
   const deletedExpired = await prisma.session.deleteMany({
@@ -26,26 +16,22 @@ async function main() {
   });
   console.log(`🧹 Cleaned up ${deletedExpired.count} expired sessions`);
 
-  // Create test session with token (simulating PIN authentication)
-  const testToken = generateRandomToken();
+  // Create test session
   const testSessionId = `session-test-${Date.now()}`;
 
   const session = await prisma.session.upsert({
     where: { sessionId: testSessionId },
     update: {
-      token: testToken,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
     create: {
       sessionId: testSessionId,
-      token: testToken,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     },
   });
   console.log('✅ Created/Updated anonymous session:', {
     id: session.id,
     sessionId: session.sessionId,
-    token: session.token?.substring(0, 20) + '...',
     expiresAt: session.expiresAt,
   });
 
@@ -96,11 +82,10 @@ async function main() {
   console.log(`   Messages: ${totalMessages}`);
 
   console.log('\n🎉 Seed completed successfully!');
-  console.log('\n💡 Test credentials:');
+  console.log('\n💡 Test session:');
   console.log(`   Session ID: ${session.sessionId}`);
-  console.log(`   Token: ${session.token}`);
   console.log('\n📝 Test the API:');
-  console.log(`   curl -H "Authorization: Bearer ${session.token}" http://localhost:3001/api/chat/history/${session.sessionId}`);
+  console.log(`   curl http://localhost:3001/api/chat/history/${session.sessionId}`);
 }
 
 main()

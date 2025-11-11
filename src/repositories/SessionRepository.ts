@@ -33,17 +33,6 @@ export class SessionRepository {
     });
   }
 
-  async deleteExpired(): Promise<number> {
-    const result = await this.prisma.session.deleteMany({
-      where: {
-        expiresAt: {
-          lt: new Date(),
-        },
-      },
-    });
-    return result.count;
-  }
-
   async countActive(): Promise<number> {
     return this.prisma.session.count({
       where: {

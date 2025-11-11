@@ -1334,17 +1334,12 @@ export class DashboardController {
    */
   async getStats(_req: Request, res: Response): Promise<void> {
     try {
-      const [totalSessions, activeSessions, totalMessages] =
-        await Promise.all([
-          this.sessionRepository.countActive(),
-          this.sessionRepository.countActive(),
-          this.getTotalMessages(),
-        ]);
+      const activeSessions = await this.sessionRepository.countActive();
 
       res.json({
-        totalSessions,
+        totalSessions: activeSessions,
         activeSessions,
-        totalMessages,
+        totalMessages: 0,
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to load statistics' });
@@ -1384,14 +1379,5 @@ export class DashboardController {
       res.status(500).json({ error: 'Failed to load sessions' });
     }
   }
-
-  /**
-   * Helper: Get total messages count
-   * Note: Returns 0 as placeholder - message counting not implemented
-   */
-  private async getTotalMessages(): Promise<number> {
-    return 0;
-  }
-
 
 }

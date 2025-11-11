@@ -1,15 +1,14 @@
 import { ChatHistoryRepository } from '../repositories/ChatHistoryRepository';
-import { SessionRepository } from '../repositories/SessionRepository';
 import { logInfo, logError } from '../infra/log/logger';
-import { calculateExpiryDate, SESSION_EXPIRY } from '../utils/sessionUtils';
+import { SessionService } from './SessionService';
 
 export class ChatHistoryService {
   private chatHistoryRepository: ChatHistoryRepository;
-  private sessionRepository: SessionRepository;
+  private sessionService: SessionService;
 
   constructor() {
     this.chatHistoryRepository = new ChatHistoryRepository();
-    this.sessionRepository = new SessionRepository();
+    this.sessionService = new SessionService();
   }
 
   private generateTitle(text: string): string {
@@ -89,20 +88,7 @@ export class ChatHistoryService {
   }
 
   private async ensureSessionExists(sessionId: string): Promise<string> {
-    const existingSession = await this.sessionRepository.findBySessionId(sessionId);
-    
-    if (existingSession) {
-      return existingSession.id;
-    }
-    
-    const expiresAt = calculateExpiryDate(SESSION_EXPIRY.REGULAR_SESSION);
-    const newSession = await this.sessionRepository.create({
-      sessionId,
-      expiresAt,
-    });
-    
-    logInfo('New session created for chat history', { sessionId });
-    return newSession.id;
+    return this.sessionService.ensureSessionExists(sessionId);
   }
 
   async deleteHistory(id: string) {
