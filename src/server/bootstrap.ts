@@ -1,20 +1,9 @@
-/**
- * Server Bootstrap
- * Start Express server untuk local development
- * 
- * Note: File ini hanya digunakan untuk local development.
- * Untuk Vercel deployment, gunakan api/index.ts sebagai serverless handler.
- */
-
 import 'dotenv/config';
 import { app } from './app';
 import { config } from '../config/env';
 import { logInfo, logError } from '../infra/log/logger';
 import PrismaService from '../infra/db/prisma';
 
-/**
- * Initialize database connection
- */
 async function initializeDatabase() {
   try {
     await PrismaService.connect();
@@ -31,13 +20,9 @@ async function initializeDatabase() {
   }
 }
 
-/**
- * Start server
- */
 const PORT = config.PORT;
 
 async function startServer() {
-  // Initialize database first
   await initializeDatabase();
 
   const server = app.listen(PORT, () => {
@@ -53,9 +38,6 @@ async function startServer() {
 const serverPromise = startServer();
 serverPromise.then((server) => {
 
-/**
- * Handle server errors
- */
 server.on('error', (error: NodeJS.ErrnoException) => {
   if (error.code === 'EADDRINUSE') {
     logError(`❌ Port ${PORT} sudah digunakan. Gunakan port lain atau stop aplikasi yang menggunakan port tersebut.`);
@@ -67,9 +49,6 @@ server.on('error', (error: NodeJS.ErrnoException) => {
   process.exit(1);
 });
 
-  /**
-   * Handle graceful shutdown
-   */
   process.on('SIGTERM', async () => {
     logInfo('⚠️  SIGTERM signal received. Shutting down gracefully...');
     await PrismaService.disconnect();

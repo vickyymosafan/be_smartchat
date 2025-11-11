@@ -1,6 +1,5 @@
 import { prisma } from '../infra/db/prisma';
 import { Session } from '../generated/prisma';
-import { CACHE_STRATEGIES } from '../infra/db/cache-config';
 
 export class SessionRepository {
   private prisma = prisma;
@@ -25,17 +24,11 @@ export class SessionRepository {
   }
 
   async findBySessionId(sessionId: string): Promise<Session | null> {
-    return this.prisma.session.findUnique({
-      where: { sessionId },
-      cacheStrategy: CACHE_STRATEGIES.SESSION,
-    });
+    return this.prisma.session.findUnique({ where: { sessionId } });
   }
 
   async countActive(): Promise<number> {
-    return this.prisma.session.count({
-      where: { expiresAt: { gt: new Date() } },
-      cacheStrategy: CACHE_STRATEGIES.SESSION,
-    });
+    return this.prisma.session.count({ where: { expiresAt: { gt: new Date() } } });
   }
 
   async findInactive(daysAgo: number = 30): Promise<Session[]> {
@@ -45,7 +38,6 @@ export class SessionRepository {
       where: { lastActivityAt: { gte: since } },
       orderBy: { lastActivityAt: 'desc' },
       take: 20,
-      cacheStrategy: CACHE_STRATEGIES.SESSION,
     });
   }
 }

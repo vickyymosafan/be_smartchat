@@ -1,8 +1,3 @@
-/**
- * ChatHistory Controller
- * Handle HTTP request/response untuk chat history endpoints
- */
-
 import { Request, Response, NextFunction } from 'express';
 import { ChatHistoryService } from '../services/ChatHistoryService';
 import { sendSuccess, sendSuccessMessage, sendValidationError, validateRequiredFields } from '../utils/responseUtils';
@@ -10,10 +5,6 @@ import { sendSuccess, sendSuccessMessage, sendValidationError, validateRequiredF
 export class ChatHistoryController {
   constructor(private chatHistoryService: ChatHistoryService) {}
 
-  /**
-   * Handle POST /api/chat/histories
-   * Create new chat history from first message
-   */
   async handleCreateHistory(
     req: Request,
     res: Response,
@@ -36,10 +27,6 @@ export class ChatHistoryController {
     }
   }
 
-  /**
-   * Handle GET /api/chat/histories
-   * Get all chat histories (across all sessions)
-   */
   async handleGetAllHistories(
     _req: Request,
     res: Response,
@@ -53,10 +40,6 @@ export class ChatHistoryController {
     }
   }
 
-  /**
-   * Handle PATCH /api/chat/histories/:id
-   * Rename chat history
-   */
   async handleRenameHistory(
     req: Request,
     res: Response,
@@ -80,10 +63,6 @@ export class ChatHistoryController {
     }
   }
 
-  /**
-   * Handle DELETE /api/chat/histories/:id
-   * Delete chat history
-   */
   async handleDeleteHistory(
     req: Request,
     res: Response,

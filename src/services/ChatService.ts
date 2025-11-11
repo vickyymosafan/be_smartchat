@@ -13,7 +13,7 @@ export class ChatService {
   constructor(private httpClient: HttpClient) {}
 
   async forwardToN8n(payload: ChatRequest): Promise<any> {
-    const sessionId = payload.userId || generateSessionId();
+    const sessionId = payload.sessionId || generateSessionId();
     let sessionInternalId: string;
 
     try {
@@ -33,6 +33,12 @@ export class ChatService {
     }
 
     try {
+      logInfo('Forwarding to N8N', { 
+        url: config.N8N_WEBHOOK_URL,
+        sessionId,
+        messageLength: payload.message.length 
+      });
+
       const response = await this.httpClient.post(
         config.N8N_WEBHOOK_URL,
         {
@@ -46,6 +52,11 @@ export class ChatService {
           },
         }
       );
+
+      logInfo('N8N response received', { 
+        status: response.status,
+        hasData: !!response.data 
+      });
 
       const assistantMessage = response.data?.output || response.data?.message || JSON.stringify(response.data);
       
@@ -66,6 +77,7 @@ export class ChatService {
         message: error.message,
         status: error.status,
         code: error.code,
+        stack: error.stack,
       });
 
       const errorMessage = error.code === 'ECONNREFUSED'
