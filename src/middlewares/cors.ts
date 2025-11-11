@@ -28,6 +28,21 @@ export const corsMiddleware = cors({
       return callback(null, true);
     }
 
+    // Development: Allow all localhost origins
+    if (config.NODE_ENV === 'development') {
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return callback(null, true);
+      }
+    }
+
+    // Production: Allow all Vercel preview/production domains
+    if (config.NODE_ENV === 'production') {
+      if (origin.includes('.vercel.app')) {
+        console.log(`[CORS] Allowing Vercel origin: ${origin}`);
+        return callback(null, true);
+      }
+    }
+
     // Allow same-origin requests (dashboard di localhost:PORT)
     const serverPort = config.PORT || 3001;
     const allowedLocalOrigins = [
@@ -43,6 +58,10 @@ export const corsMiddleware = cors({
     if (config.FRONTEND_ORIGINS.includes(origin)) {
       return callback(null, true);
     }
+
+    // Log rejected origin untuk debugging
+    console.warn(`[CORS] Origin rejected: ${origin}`);
+    console.warn(`[CORS] Allowed origins: ${config.FRONTEND_ORIGINS.join(', ')}`);
 
     // Reject origin yang tidak di whitelist
     callback(new Error('Origin tidak diizinkan oleh CORS policy'));
