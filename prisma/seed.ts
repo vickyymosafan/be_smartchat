@@ -52,22 +52,22 @@ async function main() {
   // Create sample chat messages
   const messages = [
     {
-      sessionId: session.sessionId,
+      sessionId: session.id, // Use internal ID, not sessionId string
       role: 'user',
       content: 'Hello! How are you?',
     },
     {
-      sessionId: session.sessionId,
+      sessionId: session.id,
       role: 'assistant',
       content: "I'm doing well, thank you! How can I help you today?",
     },
     {
-      sessionId: session.sessionId,
+      sessionId: session.id,
       role: 'user',
       content: 'Can you tell me about ChatSmart?',
     },
     {
-      sessionId: session.sessionId,
+      sessionId: session.id,
       role: 'assistant',
       content:
         'ChatSmart is an intelligent chat application that uses AI to provide helpful responses. It features persistent chat history, secure authentication, and seamless integration with n8n workflows.',
@@ -76,7 +76,7 @@ async function main() {
 
   // Delete existing messages for this session to avoid duplicates
   await prisma.message.deleteMany({
-    where: { sessionId: session.sessionId },
+    where: { sessionId: session.id }, // Use internal ID
   });
 
   // Create messages
@@ -99,7 +99,7 @@ async function main() {
   console.log('\n💡 Test credentials:');
   console.log(`   Session ID: ${session.sessionId}`);
   console.log(`   Token: ${session.token}`);
-  console.log('\n📝 You can use this token to test the API:');
+  console.log('\n📝 Test the API:');
   console.log(`   curl -H "Authorization: Bearer ${session.token}" http://localhost:3001/api/chat/history/${session.sessionId}`);
 }
 
