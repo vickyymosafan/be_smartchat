@@ -1,7 +1,7 @@
-import PrismaService from '../infra/db/prisma';
+import { prisma } from '../infra/db/prisma';
 
 export class ChatHistoryRepository {
-  private prisma = PrismaService.getClient();
+  private prisma = prisma;
 
   async create(data: {
     sessionId: string;

@@ -1,8 +1,8 @@
-import PrismaService from '../infra/db/prisma';
+import { prisma } from '../infra/db/prisma';
 import { PinAttempt } from '../generated/prisma';
 
 export class PinAttemptRepository {
-  private prisma = PrismaService.getClient();
+  private prisma = prisma;
 
   async create(data: {
     ipAddress: string;

@@ -2,56 +2,68 @@ import { PrismaClient } from '../../generated/prisma';
 import { logInfo, logError } from '../log/logger';
 
 /**
- * Prisma Client Singleton
- * Menggunakan singleton pattern untuk menghindari multiple instances
+ * Prisma Client Singleton for Serverless
+ * Prevents multiple instances in serverless environments (Vercel, AWS Lambda)
+ * Uses global cache to persist across hot reloads in development
+ */
+
+// Extend global type to include prisma cache
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+/**
+ * Create Prisma Client instance
+ * Only logs errors and warnings to reduce overhead
+ */
+function createPrismaClient(): PrismaClient {
+  const client = new PrismaClient({
+    log: [
+      { level: 'error', emit: 'event' },
+      { level: 'warn', emit: 'event' },
+    ],
+  });
+
+  // Log errors
+  client.$on('error' as never, (e: any) => {
+    logError('Prisma Error', e);
+  });
+
+  // Log warnings
+  client.$on('warn' as never, (e: any) => {
+    logError('Prisma Warning', e);
+  });
+
+  logInfo('[INFO] Prisma Client initialized');
+
+  return client;
+}
+
+/**
+ * Global Prisma Client instance
+ * Reuses existing instance in development (hot reload)
+ * Creates new instance in production
+ */
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+
+// Cache instance in development to prevent multiple instances during hot reload
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+
+/**
+ * Prisma Service - Utility methods for database operations
+ * Only used in bootstrap.ts for local development
  */
 class PrismaService {
-  private static instance: PrismaClient | null = null;
-
-  /**
-   * Get Prisma Client instance
-   * Lazy initialization - hanya create instance saat pertama kali dibutuhkan
-   */
-  static getClient(): PrismaClient {
-    if (!PrismaService.instance) {
-      PrismaService.instance = new PrismaClient({
-        log: [
-          { level: 'query', emit: 'event' },
-          { level: 'error', emit: 'event' },
-          { level: 'warn', emit: 'event' },
-        ],
-      });
-
-      // Log queries di development
-      if (process.env.NODE_ENV === 'development') {
-        PrismaService.instance.$on('query' as never, (e: any) => {
-          logInfo('Prisma Query', {
-            query: e.query,
-            params: e.params,
-            duration: `${e.duration}ms`,
-          });
-        });
-      }
-
-      // Log errors
-      PrismaService.instance.$on('error' as never, (e: any) => {
-        logError('Prisma Error', e);
-      });
-
-      logInfo('Prisma Client initialized');
-    }
-
-    return PrismaService.instance;
-  }
-
   /**
    * Connect to database
-   * Explicit connection - useful untuk testing atau startup checks
+   * Note: Prisma connects automatically on first query
+   * This method is for explicit connection (e.g., startup checks in local dev)
    */
   static async connect(): Promise<void> {
     try {
-      const client = PrismaService.getClient();
-      await client.$connect();
+      await prisma.$connect();
       logInfo('Database connected successfully');
     } catch (error) {
       logError('Failed to connect to database', error);
@@ -61,14 +73,11 @@ class PrismaService {
 
   /**
    * Disconnect from database
-   * Cleanup saat aplikasi shutdown
+   * Important: Only call this on app shutdown in local dev, NOT in serverless
    */
   static async disconnect(): Promise<void> {
-    if (PrismaService.instance) {
-      await PrismaService.instance.$disconnect();
-      PrismaService.instance = null;
-      logInfo('Database disconnected');
-    }
+    await prisma.$disconnect();
+    logInfo('Database disconnected');
   }
 
   /**
@@ -76,8 +85,7 @@ class PrismaService {
    */
   static async healthCheck(): Promise<boolean> {
     try {
-      const client = PrismaService.getClient();
-      await client.$queryRaw`SELECT 1`;
+      await prisma.$queryRaw`SELECT 1`;
       return true;
     } catch (error) {
       logError('Database health check failed', error);

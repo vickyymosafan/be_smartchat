@@ -2,11 +2,16 @@
  * Vercel Serverless Function Handler
  * 
  * Entry point untuk Vercel deployment.
- * File ini hanya export Express app tanpa wrapper serverless-http
- * karena Vercel akan otomatis handle itu.
+ * Vercel automatically wraps Express apps as serverless functions.
+ * 
+ * Important:
+ * - Prisma Client is initialized globally (see src/infra/db/prisma.ts)
+ * - No need to call prisma.$connect() or prisma.$disconnect() per request
+ * - Prisma handles connection pooling automatically
  */
 
 import { app } from '../src/server/app';
 
-// Export Express app langsung untuk Vercel
+// Export Express app for Vercel
+// Vercel will handle the serverless wrapper automatically
 export default app;
