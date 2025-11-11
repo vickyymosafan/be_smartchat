@@ -559,41 +559,23 @@ export class DashboardController {
             gap: var(--space-sm);
         }
 
-        /* Chat & PIN Components */
-        .pin-container, .chat-test-container {
+        /* Chat Components */
+        .chat-test-container {
             display: flex;
             flex-direction: column;
             gap: var(--space-sm);
         }
 
-        .pin-container {
-            padding: var(--space-md);
-            background: var(--bg-tertiary);
-            border: var(--border-width) solid var(--border-primary);
-            border-radius: var(--radius-md);
-        }
-
-        .pin-label {
-            color: var(--text-secondary);
-            font-size: var(--font-sm);
-            font-weight: 600;
-        }
-
-        .pin-input-group, .chat-input-group {
+        .chat-input-group {
             display: flex;
             gap: var(--space-sm);
         }
 
-        .pin-input, .chat-input {
+        .chat-input {
             flex: 1;
         }
 
-        .pin-input {
-            background: var(--bg-secondary);
-            font-family: monospace;
-        }
-
-        .verify-btn, .send-btn {
+        .send-btn {
             background: var(--text-primary);
             color: var(--text-inverse);
             border: none;
@@ -606,38 +588,19 @@ export class DashboardController {
             white-space: nowrap;
         }
 
-        .verify-btn:hover, .send-btn:hover {
+        .send-btn:hover {
             background: var(--bg-hover-light);
             transform: translateY(-1px);
         }
 
-        .verify-btn:active, .send-btn:active {
+        .send-btn:active {
             transform: translateY(0);
         }
 
-        .verify-btn:disabled, .send-btn:disabled {
+        .send-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
-        }
-
-        .auth-status {
-            font-size: var(--font-sm);
-            padding: var(--space-sm);
-            border-radius: var(--radius-sm);
-            text-align: center;
-        }
-
-        .auth-status.success {
-            background: var(--bg-success);
-            color: var(--accent-success);
-            border: var(--border-width) solid var(--border-success);
-        }
-
-        .auth-status.error {
-            background: var(--bg-error);
-            color: var(--accent-error);
-            border: var(--border-width) solid var(--border-error);
         }
 
         .chat-response {
@@ -847,9 +810,6 @@ export class DashboardController {
                     <div class="health-dot healthy"></div>
                     <span>System Healthy</span>
                 </div>
-                <button class="btn btn-secondary" onclick="logout()" id="logoutBtn" style="display: none; width: auto;">
-                    🚪 Logout
-                </button>
             </div>
         </div>
 
@@ -879,21 +839,7 @@ export class DashboardController {
         <div class="content-grid">
             <div class="panel">
                 <h2>💬 Chat N8N Test</h2>
-                <div id="authContainer" class="pin-container">
-                    <div class="pin-label">🔐 Enter PIN to authenticate</div>
-                    <div class="pin-input-group">
-                        <input 
-                            type="password" 
-                            id="pinInput" 
-                            class="pin-input" 
-                            placeholder="Enter PIN (182001)"
-                            onkeypress="if(event.key==='Enter') verifyPin()"
-                        />
-                        <button class="verify-btn" onclick="verifyPin()" id="verifyBtn">Verify</button>
-                    </div>
-                    <div id="authStatus"></div>
-                </div>
-                <div class="chat-test-container" id="chatContainer" style="display: none;">
+                <div class="chat-test-container">
                     <div class="chat-input-group">
                         <input 
                             type="text" 
@@ -959,106 +905,6 @@ export class DashboardController {
             }
         }
 
-        // Authentication
-        let authToken = localStorage.getItem('chatAuthToken');
-        
-        // Logout function
-        function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                // Clear token
-                localStorage.removeItem('chatAuthToken');
-                authToken = null;
-                
-                // Clear chat history
-                chatHistory = [];
-                
-                // Reset UI
-                document.getElementById('chatContainer').style.display = 'none';
-                document.getElementById('authContainer').style.display = 'flex';
-                document.getElementById('logoutBtn').style.display = 'none';
-                document.getElementById('pinInput').value = '';
-                document.getElementById('authStatus').textContent = '';
-                document.getElementById('chatResponse').innerHTML = '<div class="empty">Send a message to test N8N chat integration</div>';
-                
-                // Show logout message
-                const authStatus = document.getElementById('authStatus');
-                authStatus.className = 'auth-status success';
-                authStatus.textContent = '✓ Logged out successfully';
-                setTimeout(() => {
-                    authStatus.textContent = '';
-                }, 3000);
-            }
-        }
-        
-        // Check if already authenticated on load
-        if (authToken) {
-            document.getElementById('authContainer').style.display = 'none';
-            document.getElementById('chatContainer').style.display = 'flex';
-            document.getElementById('logoutBtn').style.display = 'block';
-        }
-        
-        async function verifyPin() {
-            const pinInput = document.getElementById('pinInput');
-            const verifyBtn = document.getElementById('verifyBtn');
-            const authStatus = document.getElementById('authStatus');
-            const pin = pinInput.value.trim();
-            
-            if (!pin) {
-                authStatus.className = 'auth-status error';
-                authStatus.textContent = 'Please enter PIN';
-                return;
-            }
-            
-            // Disable input
-            pinInput.disabled = true;
-            verifyBtn.disabled = true;
-            verifyBtn.textContent = 'Verifying...';
-            authStatus.textContent = '';
-            
-            try {
-                const res = await fetch('/api/auth/verify-pin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pin })
-                });
-                
-                const data = await res.json();
-                
-                console.log('PIN verify response:', { status: res.status, data });
-                
-                if (res.ok && data.data && data.data.token) {
-                    // Save token
-                    authToken = data.data.token;
-                    localStorage.setItem('chatAuthToken', authToken);
-                    
-                    // Show success
-                    authStatus.className = 'auth-status success';
-                    authStatus.textContent = '✓ Authentication successful!';
-                    
-                    // Switch to chat UI
-                    setTimeout(() => {
-                        document.getElementById('authContainer').style.display = 'none';
-                        document.getElementById('chatContainer').style.display = 'flex';
-                        document.getElementById('logoutBtn').style.display = 'block';
-                    }, 1000);
-                } else {
-                    authStatus.className = 'auth-status error';
-                    authStatus.textContent = '✗ ' + (data.message || 'Invalid PIN');
-                    pinInput.disabled = false;
-                    verifyBtn.disabled = false;
-                    verifyBtn.textContent = 'Verify';
-                    pinInput.value = '';
-                    pinInput.focus();
-                }
-            } catch (error) {
-                authStatus.className = 'auth-status error';
-                authStatus.textContent = '✗ Error: ' + error.message;
-                pinInput.disabled = false;
-                verifyBtn.disabled = false;
-                verifyBtn.textContent = 'Verify';
-            }
-        }
-
         // Send chat message to N8N
         let chatHistory = [];
         
@@ -1099,12 +945,11 @@ export class DashboardController {
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + authToken
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         message: message,
-                        sessionId: sessionId
+                        userId: sessionId
                     })
                 });
                 
