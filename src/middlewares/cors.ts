@@ -41,6 +41,11 @@ export const corsMiddleware = cors({
         console.log(`[CORS] Allowing Vercel origin: ${origin}`);
         return callback(null, true);
       }
+      // Allow localhost for testing production backend from local frontend
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        console.log(`[CORS] Allowing localhost origin for testing: ${origin}`);
+        return callback(null, true);
+      }
     }
 
     // Allow same-origin requests (dashboard di localhost:PORT)
