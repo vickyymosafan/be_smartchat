@@ -6,7 +6,6 @@ export class SessionRepository {
 
   async create(data: {
     sessionId: string;
-    token?: string;
     expiresAt: Date;
     ipAddress?: string;
     userAgent?: string;
@@ -28,12 +27,6 @@ export class SessionRepository {
     });
   }
 
-  async findByToken(token: string): Promise<Session | null> {
-    return this.prisma.session.findUnique({
-      where: { token },
-    });
-  }
-
   async findBySessionId(sessionId: string): Promise<Session | null> {
     return this.prisma.session.findUnique({
       where: { sessionId },
@@ -49,12 +42,6 @@ export class SessionRepository {
       },
     });
     return result.count;
-  }
-
-  async deleteByToken(token: string): Promise<void> {
-    await this.prisma.session.delete({
-      where: { token },
-    });
   }
 
   async countActive(): Promise<number> {

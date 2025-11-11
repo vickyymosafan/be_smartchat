@@ -11,16 +11,12 @@ import { errorHandler } from '../middlewares/errorHandler';
 import { AxiosHttpClient } from '../infra/http/AxiosHttpClient';
 import { ChatService } from '../services/ChatService';
 import { ChatController } from '../controllers/ChatController';
-import { AuthService } from '../services/AuthService';
-import { AuthController } from '../controllers/AuthController';
 import { ChatHistoryService } from '../services/ChatHistoryService';
 import { ChatHistoryController } from '../controllers/ChatHistoryController';
 import { createChatRoutes, createHealthRoute } from '../routes/chatRoutes';
-import { createAuthRoutes } from '../routes/authRoutes';
 import { createChatHistoryRoutes } from '../routes/chatHistoryRoutes';
 import { createDashboardRoutes } from '../routes/dashboardRoutes';
 import { DashboardController } from '../controllers/DashboardController';
-import { authMiddleware } from '../middlewares/authMiddleware';
 
 /**
  * Initialize Express application
@@ -76,17 +72,14 @@ const httpClient = new AxiosHttpClient();
 
 // Application layer: Business logic services
 const chatService = new ChatService(httpClient);
-const authService = new AuthService();
 const chatHistoryService = new ChatHistoryService();
 
 // Presentation layer: HTTP request/response controllers
 const chatController = new ChatController(chatService);
-const authController = new AuthController(authService);
 const chatHistoryController = new ChatHistoryController(chatHistoryService);
 const dashboardController = new DashboardController();
 
 // Routes: API endpoints dengan controllers
-const authRoutes = createAuthRoutes(authController);
 const chatRoutes = createChatRoutes(chatController);
 const chatHistoryRoutes = createChatHistoryRoutes(chatHistoryController);
 const dashboardRoutes = createDashboardRoutes(dashboardController);
@@ -99,13 +92,9 @@ app.use(healthRoute);
 // Dashboard routes (public - for monitoring)
 app.use(dashboardRoutes);
 
-// Auth routes (public - no auth required)
-app.use(authRoutes);
-
-// Chat routes (protected - auth required)
-// Mount all chat-related routes under /api/chat with auth middleware
-app.use('/api/chat', authMiddleware, chatRoutes);
-app.use('/api/chat', authMiddleware, chatHistoryRoutes);
+// Chat routes (public - no auth required)
+app.use('/api/chat', chatRoutes);
+app.use('/api/chat', chatHistoryRoutes);
 
 // 6. Global error handler (harus terakhir)
 app.use(errorHandler);

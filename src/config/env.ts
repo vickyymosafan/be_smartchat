@@ -6,7 +6,6 @@
 export interface EnvConfig {
   N8N_WEBHOOK_URL: string;
   FRONTEND_ORIGINS: string[];
-  PIN_CODE: string;
   PORT: number;
   N8N_TIMEOUT_MS: number;
   LOG_LEVEL: string;
@@ -21,7 +20,6 @@ function loadConfig(): EnvConfig {
   // Validasi variabel wajib
   const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
   const frontendOrigins = process.env.FRONTEND_ORIGINS;
-  const pinCode = process.env.PIN_CODE;
 
   if (!n8nWebhookUrl) {
     throw new Error(
@@ -32,12 +30,6 @@ function loadConfig(): EnvConfig {
   if (!frontendOrigins) {
     throw new Error(
       'FRONTEND_ORIGINS tidak ditemukan. Pastikan environment variable sudah diset.'
-    );
-  }
-
-  if (!pinCode) {
-    throw new Error(
-      'PIN_CODE tidak ditemukan. Pastikan environment variable sudah diset.'
     );
   }
 
@@ -78,7 +70,6 @@ function loadConfig(): EnvConfig {
   return {
     N8N_WEBHOOK_URL: n8nWebhookUrl,
     FRONTEND_ORIGINS: originsArray,
-    PIN_CODE: pinCode,
     PORT: port,
     N8N_TIMEOUT_MS: n8nTimeoutMs,
     LOG_LEVEL: logLevel,

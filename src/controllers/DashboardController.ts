@@ -5,15 +5,12 @@
 
 import { Request, Response } from 'express';
 import { SessionRepository } from '../repositories/SessionRepository';
-import { PinAttemptRepository } from '../repositories/PinAttemptRepository';
 
 export class DashboardController {
   private sessionRepository: SessionRepository;
-  private pinAttemptRepository: PinAttemptRepository;
 
   constructor() {
     this.sessionRepository = new SessionRepository();
-    this.pinAttemptRepository = new PinAttemptRepository();
   }
 
   /**
@@ -1337,19 +1334,17 @@ export class DashboardController {
    */
   async getStats(_req: Request, res: Response): Promise<void> {
     try {
-      const [totalSessions, activeSessions, totalMessages, pinAttempts24h] =
+      const [totalSessions, activeSessions, totalMessages] =
         await Promise.all([
           this.sessionRepository.countActive(),
           this.sessionRepository.countActive(),
           this.getTotalMessages(),
-          this.getPinAttempts24h(),
         ]);
 
       res.json({
         totalSessions,
         activeSessions,
         totalMessages,
-        pinAttempts24h,
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to load statistics' });
@@ -1361,22 +1356,8 @@ export class DashboardController {
    */
   async getActivity(_req: Request, res: Response): Promise<void> {
     try {
-      // Get recent PIN attempts (last 20)
-      const recentAttempts = await this.pinAttemptRepository.findRecentByIp(
-        '',
-        20
-      );
-
-      // Transform to activity format
-      const activity = recentAttempts.map((attempt) => ({
-        event: attempt.success ? 'PIN Verified' : 'PIN Failed',
-        success: attempt.success,
-        ipAddress: attempt.ipAddress,
-        sessionId: null,
-        createdAt: attempt.attemptAt,
-      }));
-
-      res.json(activity);
+      // Return empty activity for now (no authentication tracking)
+      res.json([]);
     } catch (error) {
       res.status(500).json({ error: 'Failed to load activity' });
     }
@@ -1412,16 +1393,5 @@ export class DashboardController {
     return 0;
   }
 
-  /**
-   * Helper: Get PIN attempts in last 24 hours
-   * Note: This counts all failed attempts globally, not per IP
-   */
-  private async getPinAttempts24h(): Promise<number> {
-    try {
-      // Count all failed attempts in last 24 hours (empty IP = all IPs)
-      return await this.pinAttemptRepository.countFailedAttempts('', 1440);
-    } catch {
-      return 0;
-    }
-  }
+
 }

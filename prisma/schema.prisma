@@ -22,13 +22,11 @@ datasource db {
 // ============================================
 
 // Session model - Represents user sessions
-// Authentication is PIN-based, sessions are anonymous
-// Each session has a unique sessionId and optional auth token
-// Tracks session metadata for security and analytics
+// Sessions are anonymous, identified by sessionId only
+// No authentication required
 model Session {
   id             String        @id @default(cuid())
   sessionId      String        @unique
-  token          String?       @unique
   expiresAt      DateTime
   ipAddress      String?
   userAgent      String?
@@ -39,7 +37,6 @@ model Session {
   chatHistories  ChatHistory[]
   
   @@index([sessionId])
-  @@index([token])
   @@map("sessions")
 }
 
@@ -74,14 +71,4 @@ model Message {
   @@map("messages")
 }
 
-// PinAttempt model - Track PIN verification attempts
-// Used for brute force protection and security monitoring
-model PinAttempt {
-  id         String   @id @default(cuid())
-  ipAddress  String
-  success    Boolean  @default(false)
-  attemptAt  DateTime @default(now())
-  
-  @@index([ipAddress, attemptAt])
-  @@map("pin_attempts")
-}
+
