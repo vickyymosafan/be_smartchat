@@ -7,6 +7,8 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/AuthService';
 import { pinVerifySchema } from '../schemas/authSchemas';
 import { logInfo, logWarn } from '../infra/log/logger';
+import { extractBearerToken, extractClientIp, extractUserAgent } from '../utils/requestUtils';
+import { sendSuccess, sendSuccessMessage, sendError } from '../utils/responseUtils';
 
 export class AuthController {
   /**
@@ -29,30 +31,14 @@ export class AuthController {
    */
   async handleLogout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const authHeader = req.headers.authorization;
+      const token = extractBearerToken(req);
       
-      if (!authHeader) {
-        res.status(200).json({
-          ok: true,
-          message: 'Logout berhasil',
-        });
-        return;
-      }
-
-      const parts = authHeader.split(' ');
-      if (parts.length === 2 && parts[0] === 'Bearer') {
-        const token = parts[1];
+      if (token) {
         await this.authService.revokeToken(token);
-        
-        logInfo('User logged out', {
-          ip: req.ip,
-        });
+        logInfo('User logged out', { ip: extractClientIp(req) });
       }
 
-      res.status(200).json({
-        ok: true,
-        message: 'Logout berhasil',
-      });
+      sendSuccessMessage(res, 'Logout berhasil');
     } catch (error) {
       next(error);
     }
@@ -80,58 +66,33 @@ export class AuthController {
       if (!validation.success) {
         logWarn('PIN verification failed: Invalid request format', {
           errors: validation.error.errors,
-          ip: req.ip,
+          ip: extractClientIp(req),
         });
 
-        res.status(400).json({
-          ok: false,
-          code: 'VALIDATION_ERROR',
-          message: 'Format PIN tidak valid',
-          details: validation.error.errors,
-        });
+        sendError(res, 'VALIDATION_ERROR', 'Format PIN tidak valid', 400, validation.error.errors);
         return;
       }
 
       const { pin } = validation.data;
-
-      // Get client info
-      const ipAddress = (req.ip || req.socket.remoteAddress || 'unknown').replace('::ffff:', '');
-      const userAgent = req.headers['user-agent'] || 'unknown';
+      const ipAddress = extractClientIp(req);
+      const userAgent = extractUserAgent(req);
 
       // Verify PIN with brute force protection
       const result = await this.authService.verifyPin(pin, ipAddress);
 
       if (!result.valid) {
-        logWarn('PIN verification failed', {
-          ip: ipAddress,
-          message: result.message,
-        });
-
-        res.status(401).json({
-          ok: false,
-          code: 'INVALID_PIN',
-          message: result.message || 'PIN yang Anda masukkan salah',
-        });
+        logWarn('PIN verification failed', { ip: ipAddress, message: result.message });
+        sendError(res, 'INVALID_PIN', result.message || 'PIN yang Anda masukkan salah', 401);
         return;
       }
 
       // Generate token (async - save to database with metadata)
       const token = await this.authService.generateToken(ipAddress, userAgent);
-
       const activeTokens = await this.authService.getActiveTokensCount();
 
-      logInfo('PIN verification successful', {
-        ip: ipAddress,
-        activeTokens,
-      });
+      logInfo('PIN verification successful', { ip: ipAddress, activeTokens });
 
-      res.status(200).json({
-        ok: true,
-        data: {
-          token,
-          expiresIn: '24h',
-        },
-      });
+      sendSuccess(res, { token, expiresIn: '24h' });
     } catch (error) {
       next(error);
     }

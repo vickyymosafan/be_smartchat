@@ -1,4 +1,4 @@
-import { prisma } from '../infra/db/prisma';
+import PrismaService from '../infra/db/prisma';
 import { Session } from '../generated/prisma';
 
 /**
@@ -6,6 +6,7 @@ import { Session } from '../generated/prisma';
  * Menggunakan Repository Pattern untuk abstraksi database operations
  */
 export class SessionRepository {
+  private prisma = PrismaService.getClient();
   /**
    * Create new session
    * Sessions are anonymous (no user association)
@@ -17,7 +18,7 @@ export class SessionRepository {
     ipAddress?: string;
     userAgent?: string;
   }): Promise<Session> {
-    return prisma.session.create({
+    return this.prisma.session.create({
       data,
     });
   }
@@ -27,7 +28,7 @@ export class SessionRepository {
    * Called on each message to track last activity
    */
   async updateActivity(sessionId: string): Promise<void> {
-    await prisma.session.update({
+    await this.prisma.session.update({
       where: { sessionId },
       data: {
         lastActivityAt: new Date(),
@@ -42,7 +43,7 @@ export class SessionRepository {
    * Find session by token
    */
   async findByToken(token: string): Promise<Session | null> {
-    return prisma.session.findUnique({
+    return this.prisma.session.findUnique({
       where: { token },
     });
   }
@@ -51,7 +52,7 @@ export class SessionRepository {
    * Find session by sessionId
    */
   async findBySessionId(sessionId: string): Promise<Session | null> {
-    return prisma.session.findUnique({
+    return this.prisma.session.findUnique({
       where: { sessionId },
     });
   }
@@ -60,7 +61,7 @@ export class SessionRepository {
    * Delete expired sessions
    */
   async deleteExpired(): Promise<number> {
-    const result = await prisma.session.deleteMany({
+    const result = await this.prisma.session.deleteMany({
       where: {
         expiresAt: {
           lt: new Date(),
@@ -74,7 +75,7 @@ export class SessionRepository {
    * Delete session by token
    */
   async deleteByToken(token: string): Promise<void> {
-    await prisma.session.delete({
+    await this.prisma.session.delete({
       where: { token },
     });
   }
@@ -83,7 +84,7 @@ export class SessionRepository {
    * Count active sessions
    */
   async countActive(): Promise<number> {
-    return prisma.session.count({
+    return this.prisma.session.count({
       where: {
         expiresAt: {
           gt: new Date(),

@@ -6,6 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ChatHistoryService } from '../services/ChatHistoryService';
 import { sendValidationError, validateRequiredFields } from '../utils/validationUtils';
+import { sendSuccess, sendSuccessMessage } from '../utils/responseUtils';
 
 export class ChatHistoryController {
   constructor(private chatHistoryService: ChatHistoryService) {}
@@ -28,15 +29,9 @@ export class ChatHistoryController {
       }
 
       const { sessionId, firstMessage } = req.body;
-      const history = await this.chatHistoryService.createFromMessage(
-        sessionId,
-        firstMessage
-      );
+      const history = await this.chatHistoryService.createFromMessage(sessionId, firstMessage);
 
-      res.status(201).json({
-        ok: true,
-        data: history,
-      });
+      sendSuccess(res, history, 201);
     } catch (error) {
       next(error);
     }
@@ -53,11 +48,7 @@ export class ChatHistoryController {
   ): Promise<void> {
     try {
       const histories = await this.chatHistoryService.getAllHistories();
-
-      res.status(200).json({
-        ok: true,
-        data: histories,
-      });
+      sendSuccess(res, histories);
     } catch (error) {
       next(error);
     }
@@ -84,10 +75,7 @@ export class ChatHistoryController {
       const { title } = req.body;
       const updated = await this.chatHistoryService.renameHistory(id, title);
 
-      res.status(200).json({
-        ok: true,
-        data: updated,
-      });
+      sendSuccess(res, updated);
     } catch (error) {
       next(error);
     }
@@ -104,13 +92,8 @@ export class ChatHistoryController {
   ): Promise<void> {
     try {
       const { id } = req.params;
-
       await this.chatHistoryService.deleteHistory(id);
-
-      res.status(200).json({
-        ok: true,
-        message: 'Chat history deleted successfully',
-      });
+      sendSuccessMessage(res, 'Chat history deleted successfully');
     } catch (error) {
       next(error);
     }

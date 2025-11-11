@@ -1,10 +1,12 @@
-import { prisma } from '../infra/db/prisma';
+import PrismaService from '../infra/db/prisma';
 import { Message } from '../generated/prisma';
 
 /**
  * Repository untuk Message operations
  */
 export class MessageRepository {
+  private prisma = PrismaService.getClient();
+
   /**
    * Create new message
    */
@@ -13,7 +15,7 @@ export class MessageRepository {
     role: string;
     content: string;
   }): Promise<Message> {
-    return prisma.message.create({
+    return this.prisma.message.create({
       data,
     });
   }
@@ -25,12 +27,10 @@ export class MessageRepository {
     sessionId: string,
     limit?: number
   ): Promise<Message[]> {
-    return prisma.message.findMany({
+    return this.prisma.message.findMany({
       where: { sessionId },
       orderBy: { createdAt: 'asc' },
       take: limit,
     });
   }
-
-
 }

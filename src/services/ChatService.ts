@@ -9,12 +9,8 @@ import { ChatRequest } from '../schemas/chatSchemas';
 import { config } from '../config/env';
 import { MessageRepository } from '../repositories/MessageRepository';
 import { SessionRepository } from '../repositories/SessionRepository';
+import { SessionPolicy } from '../policies/SessionPolicy';
 import { logInfo, logError } from '../infra/log/logger';
-import {
-  generateSessionId,
-  calculateExpiryDate,
-  SESSION_EXPIRY,
-} from '../utils/sessionUtils';
 
 /**
  * Service untuk menangani chat request
@@ -23,6 +19,7 @@ import {
 export class ChatService {
   private messageRepository: MessageRepository;
   private sessionRepository: SessionRepository;
+  private sessionPolicy: SessionPolicy;
 
   /**
    * Constructor dengan dependency injection
@@ -31,6 +28,7 @@ export class ChatService {
   constructor(private httpClient: HttpClient) {
     this.messageRepository = new MessageRepository();
     this.sessionRepository = new SessionRepository();
+    this.sessionPolicy = new SessionPolicy();
   }
 
   /**
@@ -57,11 +55,11 @@ export class ChatService {
    * @throws Error jika request gagal setelah retry
    */
   async forwardToN8n(payload: ChatRequest): Promise<any> {
-    const sessionId = payload.userId || generateSessionId();
+    const sessionId = this.sessionPolicy.getOrCreateSessionId(payload.userId);
 
     try {
       // Ensure session exists di database and get internal ID
-      const sessionInternalId = await this.ensureSessionExists(sessionId);
+      const sessionInternalId = await this.sessionPolicy.ensureSessionExists(sessionId);
 
       // Save user message ke database (using internal session ID)
       await this.messageRepository.create({
@@ -119,28 +117,6 @@ export class ChatService {
         `Gagal meneruskan request ke n8n: ${errorMessage} (Status: ${errorStatus})`
       );
     }
-  }
-
-  /**
-   * Ensure session exists di database
-   * Jika belum ada, create new session
-   * Returns the session internal ID for message relations
-   */
-  private async ensureSessionExists(sessionId: string): Promise<string> {
-    const existingSession = await this.sessionRepository.findBySessionId(sessionId);
-    
-    if (existingSession) {
-      return existingSession.id;
-    }
-    
-    // Create new session dengan expiry 30 hari
-    const expiresAt = calculateExpiryDate(SESSION_EXPIRY.REGULAR_SESSION);
-    const newSession = await this.sessionRepository.create({
-      sessionId,
-      expiresAt,
-    });
-    logInfo('New session created', { sessionId });
-    return newSession.id;
   }
 
   /**

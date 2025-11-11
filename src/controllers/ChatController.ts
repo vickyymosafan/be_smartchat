@@ -6,6 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ChatService } from '../services/ChatService';
 import { chatRequestSchema } from '../schemas/chatSchemas';
+import { sendSuccess } from '../utils/responseUtils';
 
 /**
  * Controller untuk menangani chat request dan health check
@@ -45,11 +46,7 @@ export class ChatController {
       // Forward ke n8n melalui service
       const n8nResponse = await this.chatService.forwardToN8n(validatedPayload);
 
-      // Return success response
-      res.status(200).json({
-        ok: true,
-        data: n8nResponse,
-      });
+      sendSuccess(res, n8nResponse);
     } catch (error) {
       // Pass error ke error handler middleware
       next(error);
@@ -79,13 +76,10 @@ export class ChatController {
 
       const messages = await this.chatService.getChatHistory(sessionId, limit);
 
-      res.status(200).json({
-        ok: true,
-        data: {
-          sessionId,
-          messages,
-          count: messages.length,
-        },
+      sendSuccess(res, {
+        sessionId,
+        messages,
+        count: messages.length,
       });
     } catch (error) {
       next(error);
@@ -104,15 +98,10 @@ export class ChatController {
    * @param res - Express response object
    */
   async handleHealthCheck(_req: Request, res: Response): Promise<void> {
-    // Calculate uptime dalam detik
     const uptime = process.uptime();
-
-    // Check database health
     const dbHealthy = await this.chatService.checkDatabaseHealth();
 
-    // Return health check response
-    res.status(200).json({
-      ok: true,
+    sendSuccess(res, {
       uptime,
       database: dbHealthy ? 'connected' : 'disconnected',
     });

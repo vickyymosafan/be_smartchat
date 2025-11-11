@@ -1,4 +1,4 @@
-import { prisma } from '../infra/db/prisma';
+import PrismaService from '../infra/db/prisma';
 import { PinAttempt } from '../generated/prisma';
 
 /**
@@ -6,6 +6,8 @@ import { PinAttempt } from '../generated/prisma';
  * Track PIN verification attempts untuk security
  */
 export class PinAttemptRepository {
+  private prisma = PrismaService.getClient();
+
   /**
    * Record PIN attempt
    */
@@ -13,7 +15,7 @@ export class PinAttemptRepository {
     ipAddress: string;
     success: boolean;
   }): Promise<PinAttempt> {
-    return prisma.pinAttempt.create({
+    return this.prisma.pinAttempt.create({
       data,
     });
   }
@@ -27,7 +29,7 @@ export class PinAttemptRepository {
   ): Promise<number> {
     const since = new Date(Date.now() - minutesAgo * 60 * 1000);
     
-    return prisma.pinAttempt.count({
+    return this.prisma.pinAttempt.count({
       where: {
         ipAddress,
         success: false,
@@ -37,6 +39,4 @@ export class PinAttemptRepository {
       },
     });
   }
-
-
 }

@@ -5,17 +5,14 @@
 
 import { Request, Response } from 'express';
 import { SessionRepository } from '../repositories/SessionRepository';
-import { MessageRepository } from '../repositories/MessageRepository';
 import { PinAttemptRepository } from '../repositories/PinAttemptRepository';
 
 export class DashboardController {
   private sessionRepository: SessionRepository;
-  private messageRepository: MessageRepository;
   private pinAttemptRepository: PinAttemptRepository;
 
   constructor() {
     this.sessionRepository = new SessionRepository();
-    this.messageRepository = new MessageRepository();
     this.pinAttemptRepository = new PinAttemptRepository();
   }
 
@@ -1359,48 +1356,21 @@ export class DashboardController {
   }
 
   /**
-   * Get recent activity
-   */
-  async getActivity(_req: Request, res: Response): Promise<void> {
-    try {
-      // Return empty array since audit logging was removed
-      res.json([]);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to load activity' });
-    }
-  }
-
-  /**
-   * Get active sessions
-   */
-  async getSessions(_req: Request, res: Response): Promise<void> {
-    try {
-      // Return empty array since findInactive was removed
-      res.json([]);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to load sessions' });
-    }
-  }
-
-  /**
    * Helper: Get total messages count
+   * Note: Returns 0 as placeholder - message counting not implemented
    */
   private async getTotalMessages(): Promise<number> {
-    try {
-      // This is a workaround - ideally add a count method to MessageRepository
-      const messages = await this.messageRepository.findBySessionId('', 1);
-      return messages.length;
-    } catch {
-      return 0;
-    }
+    return 0;
   }
 
   /**
    * Helper: Get PIN attempts in last 24 hours
+   * Note: This counts all failed attempts globally, not per IP
    */
   private async getPinAttempts24h(): Promise<number> {
     try {
-      return await this.pinAttemptRepository.countFailedAttempts('', 1440); // 24 hours
+      // Count all failed attempts in last 24 hours (empty IP = all IPs)
+      return await this.pinAttemptRepository.countFailedAttempts('', 1440);
     } catch {
       return 0;
     }

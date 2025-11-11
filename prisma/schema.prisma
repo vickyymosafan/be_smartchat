@@ -86,20 +86,3 @@ model PinAttempt {
   @@index([ipAddress, attemptAt])
   @@map("pin_attempts")
 }
-
-// AuditLog model - Security and system event logging
-// Tracks all important events for monitoring and debugging
-model AuditLog {
-  id        String   @id @default(cuid())
-  event     String   // Event type (e.g., 'PIN_VERIFY', 'TOKEN_GENERATE', 'MESSAGE_SENT')
-  ipAddress String?
-  sessionId String?
-  success   Boolean  @default(true)
-  details   String?  // JSON string with additional details
-  createdAt DateTime @default(now())
-  
-  @@index([event, createdAt])
-  @@index([ipAddress])
-  @@index([sessionId])
-  @@map("audit_logs")
-}

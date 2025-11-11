@@ -4,36 +4,17 @@
  */
 
 import { ChatHistoryRepository } from '../repositories/ChatHistoryRepository';
-import { SessionRepository } from '../repositories/SessionRepository';
+import { SessionPolicy } from '../policies/SessionPolicy';
 import { logInfo, logError } from '../infra/log/logger';
-import { calculateExpiryDate, SESSION_EXPIRY } from '../utils/sessionUtils';
+import { generateTitle, validateTitle } from '../utils/textUtils';
 
 export class ChatHistoryService {
   private chatHistoryRepository: ChatHistoryRepository;
-  private sessionRepository: SessionRepository;
+  private sessionPolicy: SessionPolicy;
 
   constructor() {
     this.chatHistoryRepository = new ChatHistoryRepository();
-    this.sessionRepository = new SessionRepository();
-  }
-
-  /**
-   * Generate title from first message
-   * Takes first 50 characters or first sentence
-   */
-  private generateTitle(message: string): string {
-    // Remove extra whitespace
-    const cleaned = message.trim().replace(/\s+/g, ' ');
-    
-    // Try to get first sentence (up to first period, question mark, or exclamation)
-    const firstSentence = cleaned.match(/^[^.!?]+[.!?]?/)?.[0] || cleaned;
-    
-    // Limit to 50 characters
-    if (firstSentence.length > 50) {
-      return firstSentence.substring(0, 47) + '...';
-    }
-    
-    return firstSentence;
+    this.sessionPolicy = new SessionPolicy();
   }
 
   /**
@@ -41,25 +22,15 @@ export class ChatHistoryService {
    */
   async createFromMessage(sessionId: string, firstMessage: string) {
     try {
-      // Get or create session
-      let session = await this.sessionRepository.findBySessionId(sessionId);
-      
-      if (!session) {
-        // Create new session if not exists
-        const expiresAt = calculateExpiryDate(SESSION_EXPIRY.REGULAR_SESSION);
-        session = await this.sessionRepository.create({
-          sessionId,
-          expiresAt,
-        });
-        logInfo('New session created for chat history', { sessionId });
-      }
+      // Ensure session exists and get internal ID
+      const sessionInternalId = await this.sessionPolicy.ensureSessionExists(sessionId);
 
       // Generate title from first message
-      const title = this.generateTitle(firstMessage);
+      const title = generateTitle(firstMessage);
 
       // Create chat history
       const history = await this.chatHistoryRepository.create({
-        sessionId: session.id,
+        sessionId: sessionInternalId,
         title,
       });
 
@@ -68,7 +39,7 @@ export class ChatHistoryService {
       // Return history with actual sessionId string
       return {
         ...history,
-        sessionId: session.sessionId,
+        sessionId,
       };
     } catch (error) {
       logError('Failed to create chat history', error);
@@ -104,12 +75,9 @@ export class ChatHistoryService {
   async renameHistory(id: string, newTitle: string) {
     try {
       // Validate title
-      if (!newTitle || newTitle.trim().length === 0) {
-        throw new Error('Title cannot be empty');
-      }
-
-      if (newTitle.length > 100) {
-        throw new Error('Title too long (max 100 characters)');
+      const validation = validateTitle(newTitle);
+      if (!validation.valid) {
+        throw new Error(validation.error);
       }
 
       // Check if history exists

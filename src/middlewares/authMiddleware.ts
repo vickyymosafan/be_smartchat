@@ -6,6 +6,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/AuthService';
 import { logWarn } from '../infra/log/logger';
+import { extractBearerToken, extractClientIp } from '../utils/requestUtils';
+import { sendError } from '../utils/responseUtils';
 
 // Create singleton AuthService instance
 const authService = new AuthService();
@@ -27,41 +29,17 @@ export async function authMiddleware(
   next: NextFunction
 ): Promise<void> {
   try {
-    // Extract token dari Authorization header
-    const authHeader = req.headers.authorization;
+    const token = extractBearerToken(req);
 
-    if (!authHeader) {
-      logWarn('Auth middleware: No authorization header', {
+    if (!token) {
+      logWarn('Auth middleware: No or invalid authorization header', {
         path: req.path,
-        ip: req.ip,
+        ip: extractClientIp(req),
       });
 
-      res.status(401).json({
-        ok: false,
-        code: 'NO_AUTH_TOKEN',
-        message: 'Token autentikasi tidak ditemukan',
-      });
+      sendError(res, 'NO_AUTH_TOKEN', 'Token autentikasi tidak ditemukan atau format tidak valid', 401);
       return;
     }
-
-    // Parse Bearer token
-    const parts = authHeader.split(' ');
-    
-    if (parts.length !== 2 || parts[0] !== 'Bearer') {
-      logWarn('Auth middleware: Invalid authorization format', {
-        path: req.path,
-        ip: req.ip,
-      });
-
-      res.status(401).json({
-        ok: false,
-        code: 'INVALID_AUTH_FORMAT',
-        message: 'Format token tidak valid',
-      });
-      return;
-    }
-
-    const token = parts[1];
 
     // Validate token (async - check database)
     const isValid = await authService.validateToken(token);
@@ -69,14 +47,10 @@ export async function authMiddleware(
     if (!isValid) {
       logWarn('Auth middleware: Invalid or expired token', {
         path: req.path,
-        ip: req.ip,
+        ip: extractClientIp(req),
       });
 
-      res.status(401).json({
-        ok: false,
-        code: 'INVALID_TOKEN',
-        message: 'Token tidak valid atau sudah expired',
-      });
+      sendError(res, 'INVALID_TOKEN', 'Token tidak valid atau sudah expired', 401);
       return;
     }
 

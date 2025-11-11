@@ -86,5 +86,4 @@ class PrismaService {
   }
 }
 
-export const prisma = PrismaService.getClient();
 export default PrismaService;
