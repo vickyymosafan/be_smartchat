@@ -6,8 +6,6 @@ export class ChatHistoryService {
   private chatHistoryRepository = new ChatHistoryRepository();
   private sessionService = new SessionService();
 
-  constructor() {}
-
   private generateTitle(text: string): string {
     const cleaned = text.trim().replace(/\s+/g, ' ');
     const firstSentence = cleaned.match(/^[^.!?]+[.!?]?/)?.[0] || cleaned;

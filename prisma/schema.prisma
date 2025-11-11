@@ -11,19 +11,6 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
-
-// ============================================
-// ChatSmart Database Schema
-// ============================================
-// Authentication: PIN-based (no email/password)
-// Sessions: Anonymous, identified by sessionId
-// Messages: Chat history per session
-// Security: PIN attempt tracking, audit logging
-// ============================================
-
-// Session model - Represents user sessions
-// Sessions are anonymous, identified by sessionId only
-// No authentication required
 model Session {
   id             String        @id @default(cuid())
   sessionId      String        @unique
