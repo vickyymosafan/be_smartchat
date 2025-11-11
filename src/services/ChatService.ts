@@ -7,17 +7,10 @@ import { generateSessionId } from '../utils/sessionUtils';
 import { SessionService } from './SessionService';
 
 export class ChatService {
-  private messageRepository: MessageRepository;
-  private sessionService: SessionService;
+  private messageRepository = new MessageRepository();
+  private sessionService = new SessionService();
 
-  constructor(
-    private httpClient: HttpClient,
-    messageRepository?: MessageRepository,
-    sessionService?: SessionService
-  ) {
-    this.messageRepository = messageRepository || new MessageRepository();
-    this.sessionService = sessionService || new SessionService();
-  }
+  constructor(private httpClient: HttpClient) {}
 
   async forwardToN8n(payload: ChatRequest): Promise<any> {
     const sessionId = payload.userId || generateSessionId();

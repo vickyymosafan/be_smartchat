@@ -3,16 +3,10 @@ import { logInfo, logError } from '../infra/log/logger';
 import { SessionService } from './SessionService';
 
 export class ChatHistoryService {
-  private chatHistoryRepository: ChatHistoryRepository;
-  private sessionService: SessionService;
+  private chatHistoryRepository = new ChatHistoryRepository();
+  private sessionService = new SessionService();
 
-  constructor(
-    chatHistoryRepository?: ChatHistoryRepository,
-    sessionService?: SessionService
-  ) {
-    this.chatHistoryRepository = chatHistoryRepository || new ChatHistoryRepository();
-    this.sessionService = sessionService || new SessionService();
-  }
+  constructor() {}
 
   private generateTitle(text: string): string {
     const cleaned = text.trim().replace(/\s+/g, ' ');

@@ -3,11 +3,7 @@ import { logInfo, logError } from '../infra/log/logger';
 import { calculateExpiryDate, SESSION_EXPIRY } from '../utils/sessionUtils';
 
 export class SessionService {
-  private sessionRepository: SessionRepository;
-
-  constructor(sessionRepository?: SessionRepository) {
-    this.sessionRepository = sessionRepository || new SessionRepository();
-  }
+  private sessionRepository = new SessionRepository();
 
   async ensureSessionExists(sessionId: string): Promise<string> {
     const existingSession = await this.sessionRepository.findBySessionId(sessionId);
