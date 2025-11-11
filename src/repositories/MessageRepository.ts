@@ -2,9 +2,6 @@ import { prisma } from '../infra/db/prisma';
 import { Message } from '../generated/prisma';
 import { CACHE_STRATEGIES } from '../infra/db/cache-config';
 
-/**
- * Message Repository with Accelerate caching
- */
 export class MessageRepository {
   private prisma = prisma;
 
@@ -13,15 +10,9 @@ export class MessageRepository {
     role: string;
     content: string;
   }): Promise<Message> {
-    return this.prisma.message.create({
-      data,
-    });
+    return this.prisma.message.create({ data });
   }
 
-  /**
-   * Find messages by session ID with caching
-   * Uses medium cache as message history is append-only
-   */
   async findBySessionId(
     sessionId: string,
     limit?: number

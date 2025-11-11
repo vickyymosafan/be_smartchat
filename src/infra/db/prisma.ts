@@ -3,11 +3,16 @@ import { withAccelerate } from '@prisma/extension-accelerate';
 import { logInfo, logError } from '../log/logger';
 
 /**
- * Prisma Client Singleton with Accelerate for Serverless
- * Uses --no-engine flag for edge runtime compatibility
- * Prevents multiple instances in serverless environments (Vercel, AWS Lambda)
- * Uses global cache to persist across hot reloads in development
- * Accelerate provides connection pooling and query caching
+ * Prisma Client Singleton with Accelerate for Serverless (Node.js Runtime)
+ * 
+ * Serverless Optimization:
+ * - Uses --no-engine flag to reduce bundle size
+ * - Prevents multiple instances across function invocations
+ * - Global cache persists across hot reloads in development
+ * - Accelerate handles connection pooling automatically
+ * 
+ * Runtime: Node.js (Vercel Serverless Functions)
+ * NOT Edge Runtime - uses standard Prisma Client
  */
 
 // Extend global type to include prisma cache
@@ -17,15 +22,20 @@ const globalForPrisma = globalThis as unknown as {
 
 /**
  * Create Prisma Client instance with Accelerate extension
- * Generated with --no-engine flag for edge runtime
- * Accelerate provides:
- * - Connection pooling for serverless
- * - Query caching with TTL
- * - Global database access
- * - Edge runtime compatibility
+ * 
+ * Accelerate Benefits for Serverless:
+ * - Connection pooling (no cold start connection overhead)
+ * - Query caching with TTL (reduces database load)
+ * - Global database access (works from any region)
+ * - Automatic connection management (no manual pooling needed)
+ * 
+ * Generated with --no-engine flag:
+ * - Smaller bundle size for faster cold starts
+ * - All queries go through Accelerate API
+ * - No local query engine needed
  */
 function createPrismaClient() {
-  // Create base client without engine (edge-compatible)
+  // Create base client for serverless
   const baseClient = new PrismaClient({
     log: [
       { level: 'error', emit: 'event' },
@@ -43,7 +53,7 @@ function createPrismaClient() {
     logError('Prisma Warning', e);
   });
 
-  logInfo('[INFO] Prisma Client with Accelerate (edge) initialized');
+  logInfo('[INFO] Prisma Client with Accelerate (serverless) initialized');
 
   // Return extended client with Accelerate
   return baseClient.$extends(withAccelerate());
@@ -63,19 +73,25 @@ if (process.env.NODE_ENV !== 'production') {
 
 /**
  * Prisma Service - Utility methods for database operations
- * Only used in bootstrap.ts for local development
- * Note: With Accelerate, connection management is handled automatically
+ * 
+ * Serverless Notes:
+ * - Only used in bootstrap.ts for local development
+ * - In serverless (Vercel), connection management is automatic
+ * - Accelerate handles all connection pooling
+ * - No need to manually connect/disconnect
  */
 class PrismaService {
   /**
    * Connect to database
-   * Note: With Accelerate, connection is managed automatically
-   * This method is kept for compatibility but does nothing in Accelerate mode
+   * 
+   * Local Development: Verifies database connection
+   * Serverless: Not needed, Accelerate connects automatically
+   * 
+   * Note: This is mainly for local dev startup checks
    */
   static async connect(): Promise<void> {
     try {
-      // Accelerate manages connections automatically
-      // Just verify we can query
+      // Verify connection with simple query
       await prisma.$queryRaw`SELECT 1`;
       logInfo('Database connected successfully via Accelerate');
     } catch (error) {
@@ -86,21 +102,25 @@ class PrismaService {
 
   /**
    * Disconnect from database
-   * Important: With Accelerate, disconnection is not needed
-   * Kept for compatibility but does nothing
+   * 
+   * Local Development: Clean shutdown
+   * Serverless: Not needed, connections are managed per-invocation
+   * 
+   * IMPORTANT: Do NOT call this in serverless functions!
+   * Vercel manages function lifecycle automatically
    */
   static async disconnect(): Promise<void> {
+    // In serverless, this is a no-op
     // Accelerate manages connections automatically
-    // No need to disconnect
-    logInfo('Database connection managed by Accelerate');
+    logInfo('Database connection managed by Accelerate (serverless)');
   }
 
   /**
-   * Health check - test database connection with caching
+   * Health check - test database connection
+   * Uses Accelerate caching for better performance
    */
   static async healthCheck(): Promise<boolean> {
     try {
-      // Use Accelerate caching for health check (5 second TTL)
       await prisma.$queryRaw`SELECT 1`;
       return true;
     } catch (error) {
