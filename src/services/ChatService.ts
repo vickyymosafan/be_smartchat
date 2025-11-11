@@ -14,9 +14,10 @@ export class ChatService {
 
   async forwardToN8n(payload: ChatRequest): Promise<any> {
     const sessionId = payload.userId || generateSessionId();
+    let sessionInternalId: string;
 
     try {
-      const sessionInternalId = await this.sessionService.ensureSessionExists(sessionId);
+      sessionInternalId = await this.sessionService.ensureSessionExists(sessionId);
 
       await this.messageRepository.create({
         sessionId: sessionInternalId,
@@ -26,7 +27,12 @@ export class ChatService {
 
       await this.sessionService.updateActivity(sessionId);
       logInfo('User message saved', { sessionId, messageLength: payload.message.length });
+    } catch (dbError: any) {
+      logError('Database error while saving user message', dbError);
+      throw new Error('Gagal menyimpan pesan ke database');
+    }
 
+    try {
       const response = await this.httpClient.post(
         config.N8N_WEBHOOK_URL,
         {
@@ -42,19 +48,35 @@ export class ChatService {
       );
 
       const assistantMessage = response.data?.output || response.data?.message || JSON.stringify(response.data);
-      await this.messageRepository.create({
-        sessionId: sessionInternalId,
-        role: 'assistant',
-        content: assistantMessage,
-      });
+      
+      try {
+        await this.messageRepository.create({
+          sessionId: sessionInternalId,
+          role: 'assistant',
+          content: assistantMessage,
+        });
+        logInfo('Assistant response saved', { sessionId, responseLength: assistantMessage.length });
+      } catch (dbError: any) {
+        logError('Failed to save assistant response to database', dbError);
+      }
 
-      logInfo('Assistant response saved', { sessionId, responseLength: assistantMessage.length });
       return response.data;
     } catch (error: any) {
-      logError('Failed to forward to n8n', error);
-      throw new Error(
-        `Gagal meneruskan request ke n8n: ${error.message || 'Unknown error'} (Status: ${error.status || 'N/A'})`
-      );
+      logError('Failed to forward to n8n', {
+        message: error.message,
+        status: error.status,
+        code: error.code,
+      });
+
+      const errorMessage = error.code === 'ECONNREFUSED'
+        ? 'Tidak dapat terhubung ke AI service. Silakan coba lagi nanti.'
+        : error.status === 502
+        ? 'AI service sedang sibuk. Silakan coba lagi.'
+        : error.status === 504
+        ? 'AI service timeout. Silakan coba lagi dengan pertanyaan yang lebih singkat.'
+        : `Terjadi kesalahan: ${error.message || 'Unknown error'}`;
+
+      throw new Error(errorMessage);
     }
   }
 
