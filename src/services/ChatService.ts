@@ -9,8 +9,8 @@ import { ChatRequest } from '../schemas/chatSchemas';
 import { config } from '../config/env';
 import { MessageRepository } from '../repositories/MessageRepository';
 import { SessionRepository } from '../repositories/SessionRepository';
-import { SessionPolicy } from '../policies/SessionPolicy';
 import { logInfo, logError } from '../infra/log/logger';
+import { generateSessionId, calculateExpiryDate, SESSION_EXPIRY } from '../utils/sessionUtils';
 
 /**
  * Service untuk menangani chat request
@@ -19,7 +19,6 @@ import { logInfo, logError } from '../infra/log/logger';
 export class ChatService {
   private messageRepository: MessageRepository;
   private sessionRepository: SessionRepository;
-  private sessionPolicy: SessionPolicy;
 
   /**
    * Constructor dengan dependency injection
@@ -28,7 +27,6 @@ export class ChatService {
   constructor(private httpClient: HttpClient) {
     this.messageRepository = new MessageRepository();
     this.sessionRepository = new SessionRepository();
-    this.sessionPolicy = new SessionPolicy();
   }
 
   /**
@@ -55,11 +53,11 @@ export class ChatService {
    * @throws Error jika request gagal setelah retry
    */
   async forwardToN8n(payload: ChatRequest): Promise<any> {
-    const sessionId = this.sessionPolicy.getOrCreateSessionId(payload.userId);
+    const sessionId = payload.userId || generateSessionId();
 
     try {
       // Ensure session exists di database and get internal ID
-      const sessionInternalId = await this.sessionPolicy.ensureSessionExists(sessionId);
+      const sessionInternalId = await this.ensureSessionExists(sessionId);
 
       // Save user message ke database (using internal session ID)
       await this.messageRepository.create({
@@ -120,6 +118,27 @@ export class ChatService {
   }
 
   /**
+   * Ensure session exists in database
+   * If not exists, create new session with standard expiry
+   */
+  private async ensureSessionExists(sessionId: string): Promise<string> {
+    const existingSession = await this.sessionRepository.findBySessionId(sessionId);
+    
+    if (existingSession) {
+      return existingSession.id;
+    }
+    
+    const expiresAt = calculateExpiryDate(SESSION_EXPIRY.REGULAR_SESSION);
+    const newSession = await this.sessionRepository.create({
+      sessionId,
+      expiresAt,
+    });
+    
+    logInfo('New session created', { sessionId });
+    return newSession.id;
+  }
+
+  /**
    * Get chat history untuk session tertentu
    * 
    * @param sessionId - Session ID (string identifier, not internal ID)
@@ -127,7 +146,6 @@ export class ChatService {
    * @returns Array of messages
    */
   async getChatHistory(sessionId: string, limit?: number): Promise<any[]> {
-    // Find session by sessionId string to get internal ID
     const session = await this.sessionRepository.findBySessionId(sessionId);
     
     if (!session) {
@@ -135,15 +153,12 @@ export class ChatService {
       return [];
     }
     
-    // Use internal session ID to query messages
     const messages = await this.messageRepository.findBySessionId(session.id, limit);
     return messages;
   }
 
   /**
    * Check database health
-   * 
-   * @returns true jika database connected, false jika tidak
    */
   async checkDatabaseHealth(): Promise<boolean> {
     try {
@@ -154,5 +169,4 @@ export class ChatService {
       return false;
     }
   }
-
 }

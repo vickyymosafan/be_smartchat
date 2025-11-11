@@ -4,17 +4,39 @@
  */
 
 import { ChatHistoryRepository } from '../repositories/ChatHistoryRepository';
-import { SessionPolicy } from '../policies/SessionPolicy';
+import { SessionRepository } from '../repositories/SessionRepository';
 import { logInfo, logError } from '../infra/log/logger';
-import { generateTitle, validateTitle } from '../utils/textUtils';
+import { calculateExpiryDate, SESSION_EXPIRY } from '../utils/sessionUtils';
 
 export class ChatHistoryService {
   private chatHistoryRepository: ChatHistoryRepository;
-  private sessionPolicy: SessionPolicy;
+  private sessionRepository: SessionRepository;
 
   constructor() {
     this.chatHistoryRepository = new ChatHistoryRepository();
-    this.sessionPolicy = new SessionPolicy();
+    this.sessionRepository = new SessionRepository();
+  }
+
+  /**
+   * Generate title from first message
+   */
+  private generateTitle(text: string): string {
+    const cleaned = text.trim().replace(/\s+/g, ' ');
+    const firstSentence = cleaned.match(/^[^.!?]+[.!?]?/)?.[0] || cleaned;
+    return firstSentence.length > 50 ? firstSentence.substring(0, 47) + '...' : firstSentence;
+  }
+
+  /**
+   * Validate title
+   */
+  private validateTitle(title: string): { valid: boolean; error?: string } {
+    if (!title || title.trim().length === 0) {
+      return { valid: false, error: 'Title cannot be empty' };
+    }
+    if (title.length > 100) {
+      return { valid: false, error: 'Title too long (max 100 characters)' };
+    }
+    return { valid: true };
   }
 
   /**
@@ -22,13 +44,9 @@ export class ChatHistoryService {
    */
   async createFromMessage(sessionId: string, firstMessage: string) {
     try {
-      // Ensure session exists and get internal ID
-      const sessionInternalId = await this.sessionPolicy.ensureSessionExists(sessionId);
+      const sessionInternalId = await this.ensureSessionExists(sessionId);
+      const title = this.generateTitle(firstMessage);
 
-      // Generate title from first message
-      const title = generateTitle(firstMessage);
-
-      // Create chat history
       const history = await this.chatHistoryRepository.create({
         sessionId: sessionInternalId,
         title,
@@ -36,7 +54,6 @@ export class ChatHistoryService {
 
       logInfo('Chat history created', { historyId: history.id, sessionId, title });
       
-      // Return history with actual sessionId string
       return {
         ...history,
         sessionId,
@@ -74,19 +91,16 @@ export class ChatHistoryService {
    */
   async renameHistory(id: string, newTitle: string) {
     try {
-      // Validate title
-      const validation = validateTitle(newTitle);
+      const validation = this.validateTitle(newTitle);
       if (!validation.valid) {
         throw new Error(validation.error);
       }
 
-      // Check if history exists
       const exists = await this.chatHistoryRepository.exists(id);
       if (!exists) {
         throw new Error('Chat history not found');
       }
 
-      // Update title
       const updated = await this.chatHistoryRepository.updateTitle(id, newTitle.trim());
       logInfo('Chat history renamed', { historyId: id, newTitle });
       return updated;
@@ -97,17 +111,35 @@ export class ChatHistoryService {
   }
 
   /**
+   * Ensure session exists in database
+   */
+  private async ensureSessionExists(sessionId: string): Promise<string> {
+    const existingSession = await this.sessionRepository.findBySessionId(sessionId);
+    
+    if (existingSession) {
+      return existingSession.id;
+    }
+    
+    const expiresAt = calculateExpiryDate(SESSION_EXPIRY.REGULAR_SESSION);
+    const newSession = await this.sessionRepository.create({
+      sessionId,
+      expiresAt,
+    });
+    
+    logInfo('New session created for chat history', { sessionId });
+    return newSession.id;
+  }
+
+  /**
    * Delete chat history
    */
   async deleteHistory(id: string) {
     try {
-      // Check if history exists
       const exists = await this.chatHistoryRepository.exists(id);
       if (!exists) {
         throw new Error('Chat history not found');
       }
 
-      // Delete history
       await this.chatHistoryRepository.delete(id);
       logInfo('Chat history deleted', { historyId: id });
       return { success: true };

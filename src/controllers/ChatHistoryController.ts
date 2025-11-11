@@ -5,8 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { ChatHistoryService } from '../services/ChatHistoryService';
-import { sendValidationError, validateRequiredFields } from '../utils/validationUtils';
-import { sendSuccess, sendSuccessMessage } from '../utils/responseUtils';
+import { sendSuccess, sendSuccessMessage, sendValidationError, validateRequiredFields } from '../utils/responseUtils';
 
 export class ChatHistoryController {
   constructor(private chatHistoryService: ChatHistoryService) {}

@@ -1,16 +1,12 @@
 /**
  * Response Utilities
- * Standardized response formatting for API endpoints
+ * Standardized response formatting and validation for API endpoints
  */
 
 import { Response } from 'express';
 
 /**
  * Send success response with data
- * 
- * @param res - Express response object
- * @param data - Response data
- * @param statusCode - HTTP status code (default: 200)
  */
 export function sendSuccess<T>(
   res: Response,
@@ -25,10 +21,6 @@ export function sendSuccess<T>(
 
 /**
  * Send success response with message only
- * 
- * @param res - Express response object
- * @param message - Success message
- * @param statusCode - HTTP status code (default: 200)
  */
 export function sendSuccessMessage(
   res: Response,
@@ -43,12 +35,6 @@ export function sendSuccessMessage(
 
 /**
  * Send error response
- * 
- * @param res - Express response object
- * @param code - Error code
- * @param message - Error message
- * @param statusCode - HTTP status code (default: 400)
- * @param details - Optional error details
  */
 export function sendError(
   res: Response,
@@ -68,4 +54,32 @@ export function sendError(
   }
 
   res.status(statusCode).json(response);
+}
+
+/**
+ * Send validation error response
+ */
+export function sendValidationError(
+  res: Response,
+  message: string
+): void {
+  res.status(400).json({
+    ok: false,
+    code: 'VALIDATION_ERROR',
+    message,
+  });
+}
+
+/**
+ * Validate required fields in request body
+ */
+export function validateRequiredFields(
+  body: any,
+  fields: string[]
+): { isValid: boolean; missing: string[] } {
+  const missing = fields.filter(field => !body[field]);
+  return {
+    isValid: missing.length === 0,
+    missing,
+  };
 }
