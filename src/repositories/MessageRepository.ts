@@ -1,11 +1,10 @@
-import { prisma } from '../infra/db/prisma';
 import { Message } from '../generated/prisma';
+import { BaseRepository } from './BaseRepository';
 
 /**
  * Repository untuk Message operations
  */
-export class MessageRepository {
-  private prisma = prisma;
+export class MessageRepository extends BaseRepository {
 
   async create(data: {
     sessionId: string;

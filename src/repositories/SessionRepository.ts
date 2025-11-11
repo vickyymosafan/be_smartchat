@@ -1,8 +1,7 @@
-import { prisma } from '../infra/db/prisma';
 import { Session } from '../generated/prisma';
+import { BaseRepository } from './BaseRepository';
 
-export class SessionRepository {
-  private prisma = prisma;
+export class SessionRepository extends BaseRepository {
 
   async create(data: {
     sessionId: string;

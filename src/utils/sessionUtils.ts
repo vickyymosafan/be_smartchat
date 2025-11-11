@@ -14,8 +14,3 @@ export function generateSessionId(): string {
 export function calculateExpiryDate(durationMs: number): Date {
   return new Date(Date.now() + durationMs);
 }
-
-export function generateAuthToken(): string {
-  const randomBytes = crypto.randomBytes(32);
-  return `auth_${randomBytes.toString('hex')}`;
-}

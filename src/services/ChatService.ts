@@ -5,21 +5,26 @@ import { MessageRepository } from '../repositories/MessageRepository';
 import { logInfo, logError } from '../infra/log/logger';
 import { generateSessionId } from '../utils/sessionUtils';
 import { SessionService } from './SessionService';
+import { extractAssistantMessage } from '../adapters/N8nResponseAdapter';
 
 export class ChatService {
   private messageRepository: MessageRepository;
   private sessionService: SessionService;
 
-  constructor(private httpClient: HttpClient) {
-    this.messageRepository = new MessageRepository();
-    this.sessionService = new SessionService();
+  constructor(
+    private httpClient: HttpClient,
+    messageRepository?: MessageRepository,
+    sessionService?: SessionService
+  ) {
+    this.messageRepository = messageRepository || new MessageRepository();
+    this.sessionService = sessionService || new SessionService();
   }
 
   async forwardToN8n(payload: ChatRequest): Promise<any> {
     const sessionId = payload.userId || generateSessionId();
 
     try {
-      const sessionInternalId = await this.ensureSessionExists(sessionId);
+      const sessionInternalId = await this.sessionService.ensureSessionExists(sessionId);
 
       await this.messageRepository.create({
         sessionId: sessionInternalId,
@@ -44,7 +49,7 @@ export class ChatService {
         }
       );
 
-      const assistantMessage = response.data?.output || response.data?.message || JSON.stringify(response.data);
+      const assistantMessage = extractAssistantMessage(response.data);
       await this.messageRepository.create({
         sessionId: sessionInternalId,
         role: 'assistant',
@@ -59,10 +64,6 @@ export class ChatService {
         `Gagal meneruskan request ke n8n: ${error.message || 'Unknown error'} (Status: ${error.status || 'N/A'})`
       );
     }
-  }
-
-  private async ensureSessionExists(sessionId: string): Promise<string> {
-    return this.sessionService.ensureSessionExists(sessionId);
   }
 
   async getChatHistory(sessionId: string, limit?: number): Promise<any[]> {

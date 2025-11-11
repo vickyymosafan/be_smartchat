@@ -5,8 +5,8 @@ import { calculateExpiryDate, SESSION_EXPIRY } from '../utils/sessionUtils';
 export class SessionService {
   private sessionRepository: SessionRepository;
 
-  constructor() {
-    this.sessionRepository = new SessionRepository();
+  constructor(sessionRepository?: SessionRepository) {
+    this.sessionRepository = sessionRepository || new SessionRepository();
   }
 
   async ensureSessionExists(sessionId: string): Promise<string> {

@@ -4,13 +4,13 @@
  */
 
 import { Request, Response } from 'express';
-import { SessionRepository } from '../repositories/SessionRepository';
+import { DashboardService } from '../services/DashboardService';
 
 export class DashboardController {
-  private sessionRepository: SessionRepository;
+  private dashboardService: DashboardService;
 
-  constructor() {
-    this.sessionRepository = new SessionRepository();
+  constructor(dashboardService?: DashboardService) {
+    this.dashboardService = dashboardService || new DashboardService();
   }
 
   /**
@@ -1334,13 +1334,8 @@ export class DashboardController {
    */
   async getStats(_req: Request, res: Response): Promise<void> {
     try {
-      const activeSessions = await this.sessionRepository.countActive();
-
-      res.json({
-        totalSessions: activeSessions,
-        activeSessions,
-        totalMessages: 0,
-      });
+      const stats = await this.dashboardService.getStatistics();
+      res.json(stats);
     } catch (error) {
       res.status(500).json({ error: 'Failed to load statistics' });
     }
@@ -1351,8 +1346,8 @@ export class DashboardController {
    */
   async getActivity(_req: Request, res: Response): Promise<void> {
     try {
-      // Return empty activity for now (no authentication tracking)
-      res.json([]);
+      const activity = await this.dashboardService.getRecentActivity();
+      res.json(activity);
     } catch (error) {
       res.status(500).json({ error: 'Failed to load activity' });
     }
@@ -1363,18 +1358,8 @@ export class DashboardController {
    */
   async getSessions(_req: Request, res: Response): Promise<void> {
     try {
-      // Get recent inactive sessions (last 30 days) as proxy for "active"
-      const sessions = await this.sessionRepository.findInactive(30);
-
-      // Transform to session format with message count
-      const sessionsWithData = sessions.map((session) => ({
-        sessionId: session.sessionId,
-        ipAddress: session.ipAddress,
-        messageCount: 0, // Placeholder - not implemented
-        lastActivityAt: session.lastActivityAt,
-      }));
-
-      res.json(sessionsWithData);
+      const sessions = await this.dashboardService.getActiveSessions();
+      res.json(sessions);
     } catch (error) {
       res.status(500).json({ error: 'Failed to load sessions' });
     }
