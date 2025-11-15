@@ -93,14 +93,36 @@ export class ChatService {
   }
 
   async getChatHistory(sessionId: string, limit?: number): Promise<any[]> {
+    logInfo('getChatHistory called', { 
+      userFacingSessionId: sessionId, 
+      limit 
+    });
+    
     const session = await this.sessionService.findBySessionId(sessionId);
     
     if (!session) {
-      logInfo('Session not found for history', { sessionId });
+      logInfo('Session not found for history', { 
+        userFacingSessionId: sessionId 
+      });
       return [];
     }
     
-    return this.messageRepository.findBySessionId(session.id, limit);
+    logInfo('Session found', { 
+      userFacingSessionId: sessionId,
+      internalSessionId: session.id,
+      messageCount: session.messageCount 
+    });
+    
+    const messages = await this.messageRepository.findBySessionId(session.id, limit);
+    
+    logInfo('Messages retrieved', { 
+      userFacingSessionId: sessionId,
+      internalSessionId: session.id,
+      messagesFound: messages.length,
+      expectedCount: session.messageCount 
+    });
+    
+    return messages;
   }
 
   async checkDatabaseHealth(): Promise<boolean> {
