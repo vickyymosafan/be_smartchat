@@ -13,8 +13,8 @@ export class ChatController {
   ): Promise<void> {
     try {
       const validatedPayload = chatRequestSchema.parse(req.body);
-      const n8nResponse = await this.chatService.forwardToN8n(validatedPayload);
-      sendSuccess(res, n8nResponse);
+      const response = await this.chatService.processChat(validatedPayload);
+      sendSuccess(res, response);
     } catch (error) {
       next(error);
     }

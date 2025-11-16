@@ -58,4 +58,21 @@ model Message {
   @@map("messages")
 }
 
+// CachedResponse model - Cache for AI responses
+// Stores unique question-answer pairs to avoid redundant n8n calls
+model CachedResponse {
+  id              String   @id @default(cuid())
+  questionHash    String   @unique  // SHA256 hash of normalized question
+  question        String   // Original question for debugging
+  answer          String   // Response from n8n
+  hitCount        Int      @default(0)  // Number of times cache was used
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime  // TTL - when cache expires
+  lastAccessedAt  DateTime @default(now())  // Last time cache was accessed
+  
+  @@index([expiresAt])  // For cleanup of expired cache
+  @@index([hitCount])   // For analytics
+  @@map("cached_responses")
+}
+
 

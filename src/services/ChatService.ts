@@ -5,10 +5,12 @@ import { MessageRepository } from '../repositories/MessageRepository';
 import { logInfo, logError } from '../infra/log/logger';
 import { generateSessionId } from '../utils/sessionUtils';
 import { SessionService } from './SessionService';
+import { CacheService } from './CacheService';
 
 export class ChatService {
   private messageRepository = new MessageRepository();
   private sessionService = new SessionService();
+  private cacheService = new CacheService();
 
   constructor(private httpClient: HttpClient) {}
 
@@ -127,5 +129,63 @@ export class ChatService {
 
   async checkDatabaseHealth(): Promise<boolean> {
     return this.sessionService.checkDatabaseHealth();
+  }
+
+  /**
+   * Process chat with cache support
+   * Checks cache first, falls back to n8n if cache miss
+   */
+  async processChat(payload: ChatRequest): Promise<any> {
+    const sessionId = payload.sessionId || generateSessionId();
+
+    // Check cache first
+    const cachedAnswer = await this.cacheService.getCachedResponse(payload.message);
+
+    if (cachedAnswer) {
+      // Cache hit - save messages to history and return cached answer
+      try {
+        const sessionInternalId = await this.sessionService.ensureSessionExists(sessionId);
+
+        await this.messageRepository.create({
+          sessionId: sessionInternalId,
+          role: 'user',
+          content: payload.message,
+        });
+
+        await this.messageRepository.create({
+          sessionId: sessionInternalId,
+          role: 'assistant',
+          content: cachedAnswer,
+        });
+
+        await this.sessionService.updateActivity(sessionId);
+
+        logInfo('Cache hit - messages saved to history', { 
+          sessionId, 
+          messageLength: payload.message.length 
+        });
+
+        return { 
+          output: cachedAnswer, 
+          fromCache: true 
+        };
+      } catch (dbError: any) {
+        logError('Database error while saving cached messages', dbError);
+        throw new Error('Gagal menyimpan pesan ke database');
+      }
+    }
+
+    // Cache miss - forward to n8n
+    logInfo('Cache miss - forwarding to n8n', { sessionId });
+    const response = await this.forwardToN8n(payload);
+
+    // Save response to cache
+    const answer = response?.output || response?.message || JSON.stringify(response);
+    await this.cacheService.saveCachedResponse(payload.message, answer);
+
+    return { 
+      ...response, 
+      fromCache: false 
+    };
   }
 }

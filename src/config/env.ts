@@ -5,6 +5,7 @@ export interface EnvConfig {
   N8N_TIMEOUT_MS: number;
   LOG_LEVEL: string;
   NODE_ENV: string;
+  CACHE_TTL_HOURS: number;
 }
 
 function loadConfig(): EnvConfig {
@@ -32,6 +33,9 @@ function loadConfig(): EnvConfig {
   const n8nTimeoutMs = process.env.N8N_TIMEOUT_MS
     ? parseInt(process.env.N8N_TIMEOUT_MS, 10)
     : 15000;
+  const cacheTtlHours = process.env.CACHE_TTL_HOURS
+    ? parseInt(process.env.CACHE_TTL_HOURS, 10)
+    : 24;
   const logLevel = process.env.LOG_LEVEL || 'info';
   const nodeEnv = process.env.NODE_ENV || 'development';
 
@@ -50,6 +54,7 @@ function loadConfig(): EnvConfig {
     N8N_TIMEOUT_MS: n8nTimeoutMs,
     LOG_LEVEL: logLevel,
     NODE_ENV: nodeEnv,
+    CACHE_TTL_HOURS: cacheTtlHours,
   };
 }
 
