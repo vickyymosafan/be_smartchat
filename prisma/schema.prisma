@@ -75,4 +75,21 @@ model CachedResponse {
   @@map("cached_responses")
 }
 
+// BackgroundMusic model - Background music for website
+// Stores music metadata with URL to Supabase Storage
+model BackgroundMusic {
+  id        String   @id @default(cuid())
+  title     String
+  artist    String?
+  url       String   // URL to Supabase Storage
+  isActive  Boolean  @default(true)
+  order     Int      @default(0)  // Play order
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([isActive])
+  @@index([order])
+  @@map("background_music")
+}
+
 

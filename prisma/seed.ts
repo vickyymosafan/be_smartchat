@@ -73,19 +73,50 @@ async function main() {
     console.log(`✅ Created message: [${message.role}] ${message.content.substring(0, 50)}...`);
   }
 
+  // Seed background music
+  console.log('\n🎵 Seeding background music...');
+  
+  const musicData = [
+    {
+      title: 'Kampus Biru Langkah Baru',
+      artist: 'Kampus Biru',
+      url: 'https://atddgwpoppuuarddneip.supabase.co/storage/v1/object/public/background-music/Kampus%20Biru%20Langkah%20Baru.mp3',
+      order: 1,
+    },
+    {
+      title: 'Kampus Biru Semangat Baru',
+      artist: 'Kampus Biru',
+      url: 'https://atddgwpoppuuarddneip.supabase.co/storage/v1/object/public/background-music/Kampus%20Biru%20Semangat%20Baru.mp3',
+      order: 2,
+    },
+  ];
+
+  // Delete existing music to avoid duplicates
+  await prisma.backgroundMusic.deleteMany({});
+
+  for (const music of musicData) {
+    const created = await prisma.backgroundMusic.create({
+      data: music,
+    });
+    console.log(`✅ Created music: ${created.title}`);
+  }
+
   // Summary
   const totalSessions = await prisma.session.count();
   const totalMessages = await prisma.message.count();
+  const totalMusic = await prisma.backgroundMusic.count();
 
   console.log('\n📊 Database Summary:');
   console.log(`   Sessions: ${totalSessions}`);
   console.log(`   Messages: ${totalMessages}`);
+  console.log(`   Background Music: ${totalMusic}`);
 
   console.log('\n🎉 Seed completed successfully!');
   console.log('\n💡 Test session:');
   console.log(`   Session ID: ${session.sessionId}`);
   console.log('\n📝 Test the API:');
   console.log(`   curl http://localhost:3001/api/chat/history/${session.sessionId}`);
+  console.log(`   curl http://localhost:3001/api/music`);
 }
 
 main()

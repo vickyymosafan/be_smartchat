@@ -11,7 +11,9 @@ import { ChatHistoryController } from '../controllers/ChatHistoryController';
 import { createChatRoutes, createHealthRoute } from '../routes/chatRoutes';
 import { createChatHistoryRoutes } from '../routes/chatHistoryRoutes';
 import { createDashboardRoutes } from '../routes/dashboardRoutes';
+import { createMusicRoutes } from '../routes/musicRoutes';
 import { DashboardController } from '../controllers/DashboardController';
+import { MusicController } from '../controllers/MusicController';
 
 const app: Express = express();
 
@@ -45,16 +47,19 @@ const chatHistoryService = new ChatHistoryService();
 const chatController = new ChatController(chatService);
 const chatHistoryController = new ChatHistoryController(chatHistoryService);
 const dashboardController = new DashboardController();
+const musicController = new MusicController();
 
 const chatRoutes = createChatRoutes(chatController);
 const chatHistoryRoutes = createChatHistoryRoutes(chatHistoryController);
 const dashboardRoutes = createDashboardRoutes(dashboardController);
+const musicRoutes = createMusicRoutes(musicController);
 const healthRoute = createHealthRoute(chatController);
 
 app.use(healthRoute);
 app.use(dashboardRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/chat', chatHistoryRoutes);
+app.use('/api/music', musicRoutes);
 app.use(errorHandler);
 
 export { app };
